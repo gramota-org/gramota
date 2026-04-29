@@ -1,0 +1,20 @@
+{
+  "name": "@gateway/sd-jwt",
+  "version": "0.0.0",
+  "description": "SD-JWT-VC parser and verifier for the EU Digital Identity Wallet.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  }
+}
