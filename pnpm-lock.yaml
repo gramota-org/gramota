@@ -21,6 +21,28 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@20.19.39)
 
+  packages/e2e:
+    dependencies:
+      '@gateway/holder':
+        specifier: workspace:*
+        version: link:../holder
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
+      '@gateway/trust':
+        specifier: workspace:*
+        version: link:../trust
+      '@gateway/verifier':
+        specifier: workspace:*
+        version: link:../verifier
+    devDependencies:
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
   packages/holder:
     dependencies:
       '@gateway/jose':

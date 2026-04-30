@@ -1,0 +1,22 @@
+{
+  "name": "@gateway/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cross-package E2E tests exercising every public API together. Not published.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@gateway/holder": "workspace:*",
+    "@gateway/jose": "workspace:*",
+    "@gateway/sd-jwt": "workspace:*",
+    "@gateway/trust": "workspace:*",
+    "@gateway/verifier": "workspace:*"
+  },
+  "devDependencies": {
+    "jose": "^5.9.6"
+  }
+}
