@@ -57,7 +57,7 @@ describe("OID4VP full-wire E2E — verifier ↔ wallet ↔ verifier", () => {
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.publicJwk],
     });
 

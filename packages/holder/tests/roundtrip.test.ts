@@ -76,7 +76,7 @@ describe("Issuer → Holder → Verifier roundtrip", () => {
       publicKey: holderKey.pub,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.pub],
     });
 
@@ -142,7 +142,7 @@ describe("Issuer → Holder → Verifier roundtrip", () => {
       publicKey: holderKey.pub,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, { trustedIssuers: [issuer.pub] });
+    const stored = await holder.credentials.receive(issued, { trustedIssuers: [issuer.pub] });
 
     // Holder builds a presentation aimed at verifier A.
     const presentation = await holder.present({

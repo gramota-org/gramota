@@ -66,10 +66,10 @@ describe("E2E with Presentation Exchange — verifier-driven disclosure selectio
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const idStored = await holder.receive(idCred, {
+    const idStored = await holder.credentials.receive(idCred, {
       trustedIssuers: [issuer.publicJwk],
     });
-    await holder.receive(eduCred, {
+    await holder.credentials.receive(eduCred, {
       trustedIssuers: [issuer.publicJwk],
     });
 
@@ -121,7 +121,7 @@ describe("E2E with Presentation Exchange — verifier-driven disclosure selectio
     expect(incomingPd).toBeDefined();
     if (incomingPd === undefined) return;
 
-    const credentials = await holder.list();
+    const credentials = await holder.credentials.list();
     const selection = selectForDefinition({
       definition: incomingPd,
       credentials,
@@ -207,7 +207,7 @@ describe("E2E with Presentation Exchange — verifier-driven disclosure selectio
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    await holder.receive(token, { trustedIssuers: [issuer.publicJwk] });
+    await holder.credentials.receive(token, { trustedIssuers: [issuer.publicJwk] });
 
     const definition: PresentationDefinition = {
       id: "pd-impossible",
@@ -222,7 +222,7 @@ describe("E2E with Presentation Exchange — verifier-driven disclosure selectio
     };
     const sel = selectForDefinition({
       definition,
-      credentials: await holder.list(),
+      credentials: await holder.credentials.list(),
     });
     expect(sel.fullySatisfied).toBe(false);
     expect(sel.unmatched).toHaveLength(1);

@@ -102,7 +102,7 @@ describe("Holder construction", () => {
       publicKey: pub,
       alg: "ES256",
     });
-    expect(await holder.list()).toEqual([]);
+    expect(await holder.credentials.list()).toEqual([]);
   });
 });
 
@@ -120,7 +120,7 @@ describe("Holder.receive — IETF SD-JWT §5.1 holder verification", () => {
   });
 
   it("accepts a credential signed by a trusted issuer and bound to this holder", async () => {
-    const stored = await holder.receive(s.issuanceToken, {
+    const stored = await holder.credentials.receive(s.issuanceToken, {
       trustedIssuers: [s.issuerPub],
     });
 
@@ -131,10 +131,10 @@ describe("Holder.receive — IETF SD-JWT §5.1 holder verification", () => {
   });
 
   it("persists the credential — list() returns it after receive()", async () => {
-    const stored = await holder.receive(s.issuanceToken, {
+    const stored = await holder.credentials.receive(s.issuanceToken, {
       trustedIssuers: [s.issuerPub],
     });
-    const all = await holder.list();
+    const all = await holder.credentials.list();
     expect(all).toHaveLength(1);
     expect(all[0]?.id).toBe(stored.id);
   });
@@ -142,13 +142,13 @@ describe("Holder.receive — IETF SD-JWT §5.1 holder verification", () => {
   it("rejects when issuer signature does not verify against any trusted key", async () => {
     const { pub: wrong } = await makeKey();
     await expect(
-      holder.receive(s.issuanceToken, { trustedIssuers: [wrong] }),
+      holder.credentials.receive(s.issuanceToken, { trustedIssuers: [wrong] }),
     ).rejects.toThrow(/issuer signature/);
   });
 
   it("rejects when no trusted issuers provided", async () => {
     await expect(
-      holder.receive(s.issuanceToken, { trustedIssuers: [] }),
+      holder.credentials.receive(s.issuanceToken, { trustedIssuers: [] }),
     ).rejects.toThrow(/trustedIssuer/);
   });
 
@@ -157,7 +157,7 @@ describe("Holder.receive — IETF SD-JWT §5.1 holder verification", () => {
     const sCrossBound = await setup({ boundTo: otherHolder.pub });
 
     await expect(
-      holder.receive(sCrossBound.issuanceToken, {
+      holder.credentials.receive(sCrossBound.issuanceToken, {
         trustedIssuers: [sCrossBound.issuerPub],
       }),
     ).rejects.toThrow(/cnf\.jwk does not match/);
@@ -174,13 +174,13 @@ describe("Holder.receive — IETF SD-JWT §5.1 holder verification", () => {
     });
 
     await expect(
-      holder.receive(token, { trustedIssuers: [issuer.pub] }),
+      holder.credentials.receive(token, { trustedIssuers: [issuer.pub] }),
     ).rejects.toThrow(/cnf/);
   });
 
   it("rejects malformed tokens", async () => {
     await expect(
-      holder.receive("not-a-token", { trustedIssuers: [s.issuerPub] }),
+      holder.credentials.receive("not-a-token", { trustedIssuers: [s.issuerPub] }),
     ).rejects.toThrow(/malformed/);
   });
 });
@@ -197,7 +197,7 @@ describe("Holder.present — IETF SD-JWT §5.2 + §4.3 presentation building", (
       publicKey: s.holderPub,
       alg: "ES256",
     });
-    const stored = await holder.receive(s.issuanceToken, {
+    const stored = await holder.credentials.receive(s.issuanceToken, {
       trustedIssuers: [s.issuerPub],
     });
     storedId = stored.id;
@@ -221,7 +221,7 @@ describe("Holder.present — IETF SD-JWT §5.2 + §4.3 presentation building", (
   });
 
   it("excludes non-selected disclosures from the presentation", async () => {
-    const stored = await holder.get(storedId);
+    const stored = await holder.credentials.get(storedId);
     const presentation = await holder.present({
       credentialId: storedId,
       disclose: ["given_name"],
@@ -322,18 +322,18 @@ describe("Holder — multi-credential management", () => {
       signer: signer2,
     });
 
-    await holder.receive(s1.issuanceToken, { trustedIssuers: [s1.issuerPub] });
-    await holder.receive(token2, { trustedIssuers: [issuer2.pub] });
+    await holder.credentials.receive(s1.issuanceToken, { trustedIssuers: [s1.issuerPub] });
+    await holder.credentials.receive(token2, { trustedIssuers: [issuer2.pub] });
 
-    const all = await holder.list();
+    const all = await holder.credentials.list();
     expect(all).toHaveLength(2);
 
-    const fromFirst = await holder.list({
+    const fromFirst = await holder.credentials.list({
       issuer: "https://issuer.example.com",
     });
     expect(fromFirst).toHaveLength(1);
 
-    const withAge = await holder.list({ withClaim: "age_over_18" });
+    const withAge = await holder.credentials.list({ withClaim: "age_over_18" });
     expect(withAge).toHaveLength(1);
     expect(withAge[0]?.issuer).toBe("https://second-issuer.example.com");
   });
@@ -345,12 +345,12 @@ describe("Holder — multi-credential management", () => {
       publicKey: s.holderPub,
       alg: "ES256",
     });
-    const stored = await holder.receive(s.issuanceToken, {
+    const stored = await holder.credentials.receive(s.issuanceToken, {
       trustedIssuers: [s.issuerPub],
     });
 
-    expect(await holder.remove(stored.id)).toBe(true);
-    expect(await holder.list()).toEqual([]);
+    expect(await holder.credentials.remove(stored.id)).toBe(true);
+    expect(await holder.credentials.list()).toEqual([]);
   });
 });
 

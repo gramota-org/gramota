@@ -59,7 +59,7 @@ describe("E2E scenario 1 — single-issuer happy path", () => {
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.publicJwk],
     });
 
@@ -119,7 +119,7 @@ describe("E2E scenario 2 — multi-issuer holder", () => {
       alg: "ES256",
       signer: await makeIssuerSigner(issuerA.privateJwk),
     });
-    const idStored = await sharedHolder.receive(idCred, {
+    const idStored = await sharedHolder.credentials.receive(idCred, {
       trustedIssuers: [issuerA.publicJwk],
     });
 
@@ -134,13 +134,13 @@ describe("E2E scenario 2 — multi-issuer holder", () => {
       alg: "ES256",
       signer: await makeIssuerSigner(issuerB.privateJwk),
     });
-    const eduStored = await sharedHolder.receive(eduCred, {
+    const eduStored = await sharedHolder.credentials.receive(eduCred, {
       trustedIssuers: [issuerB.publicJwk],
     });
 
     // List + filter
-    expect(await sharedHolder.list()).toHaveLength(2);
-    const govOnly = await sharedHolder.list({ issuer: "https://gov.example.com" });
+    expect(await sharedHolder.credentials.list()).toHaveLength(2);
+    const govOnly = await sharedHolder.credentials.list({ issuer: "https://gov.example.com" });
     expect(govOnly).toHaveLength(1);
 
     // Present each independently to a per-issuer verifier
@@ -229,10 +229,10 @@ describe("E2E scenario 3 — issuer key rotation", () => {
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const storedOld = await holder.receive(tokenOld, {
+    const storedOld = await holder.credentials.receive(tokenOld, {
       trustedIssuers: [oldKey.publicJwk, newKey.publicJwk],
     });
-    const storedNew = await holder.receive(tokenNew, {
+    const storedNew = await holder.credentials.receive(tokenNew, {
       trustedIssuers: [oldKey.publicJwk, newKey.publicJwk],
     });
 
@@ -311,7 +311,7 @@ describe("E2E scenario 4 — JwksUrlTrustResolver with mock HTTP", () => {
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.publicJwk],
     });
 
@@ -373,7 +373,7 @@ describe("E2E scenario 5 — cross-verifier replay rejection", () => {
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.publicJwk],
     });
 
@@ -422,7 +422,7 @@ describe("E2E scenario 6 — tampered presentations are rejected", () => {
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.publicJwk],
     });
 
@@ -491,7 +491,7 @@ describe("E2E scenario 7 — multiple presentations from one credential", () => 
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    const stored = await holder.receive(issued, {
+    const stored = await holder.credentials.receive(issued, {
       trustedIssuers: [issuer.publicJwk],
     });
 

@@ -24,7 +24,7 @@ import {
 } from "./types.js";
 
 /** Options for `holder.respondTo()`. */
-export interface RespondToOptions {
+export interface RespondOptions {
   /** Override "now" — for tests. */
   now?: () => number;
   /** When the verifier supplies multiple compatible credentials and you want
@@ -38,7 +38,7 @@ export interface RespondToOptions {
 }
 
 /** Result of `holder.respondTo()`. */
-export interface RespondToResult {
+export interface RespondResult {
   /** Form-encoded body to POST to the verifier's `response_uri`. */
   body: string;
   /** The matched credential (id + token + parsed). */
@@ -47,6 +47,18 @@ export interface RespondToResult {
   disclosed: readonly string[];
   /** The original parsed request, for caller logging. */
   request: AuthorizationRequest;
+}
+
+/** Stripe-style sub-API for credential CRUD. `holder.credentials.X(...)`. */
+export interface CredentialsApi {
+  /** Validate and store an issued SD-JWT-VC. */
+  receive(token: string, options: ReceiveOptions): Promise<StoredCredential>;
+  /** Get one stored credential by id. */
+  get(id: CredentialId): Promise<StoredCredential | undefined>;
+  /** List stored credentials, optionally filtered. */
+  list(query?: CredentialQuery): Promise<readonly StoredCredential[]>;
+  /** Remove a credential. Returns true if it existed. */
+  remove(id: CredentialId): Promise<boolean>;
 }
 
 /**
@@ -61,6 +73,9 @@ export class Holder {
   private readonly config: HolderConfig;
   private readonly store: CredentialStore;
 
+  /** Credential CRUD. `holder.credentials.{receive, list, get, remove}(...)`. */
+  readonly credentials: CredentialsApi;
+
   constructor(config: HolderConfig) {
     if (config.privateKey === null || typeof config.privateKey !== "object") {
       throw new TypeError("Holder: privateKey is required");
@@ -73,34 +88,19 @@ export class Holder {
     }
     this.config = config;
     this.store = config.store ?? new InMemoryCredentialStore();
-  }
 
-  /** Validate and store an issued SD-JWT-VC. Returns the stored credential. */
-  receive(
-    token: string,
-    options: ReceiveOptions,
-  ): Promise<StoredCredential> {
-    return receiveCredential(token, this.config, this.store, options);
+    this.credentials = {
+      receive: (token, options) =>
+        receiveCredential(token, this.config, this.store, options),
+      get: (id) => this.store.get(id),
+      list: (query) => this.store.list(query),
+      remove: (id) => this.store.remove(id),
+    };
   }
 
   /** Build a selective-disclosure presentation against a stored credential. */
   present(options: PresentOptions): Promise<string> {
     return buildPresentation(this.config, this.store, options);
-  }
-
-  /** Get a single stored credential by id. */
-  get(id: CredentialId): Promise<StoredCredential | undefined> {
-    return this.store.get(id);
-  }
-
-  /** List stored credentials, optionally filtered. */
-  list(query?: CredentialQuery): Promise<readonly StoredCredential[]> {
-    return this.store.list(query);
-  }
-
-  /** Remove a stored credential. Returns true if it existed. */
-  remove(id: CredentialId): Promise<boolean> {
-    return this.store.remove(id);
   }
 
   /** Public key — useful to share with issuers so they can bind credentials. */
@@ -119,12 +119,12 @@ export class Holder {
    *
    * Returns the body string ready to POST to `response_uri`, plus metadata.
    */
-  async respondTo(
+  async respond(
     requestUrl: string,
-    options: RespondToOptions = {},
-  ): Promise<RespondToResult> {
+    options: RespondOptions = {},
+  ): Promise<RespondResult> {
     if (typeof requestUrl !== "string" || requestUrl.length === 0) {
-      throw new HolderError("respondTo: requestUrl is required");
+      throw new HolderError("holder.respond: requestUrl is required");
     }
 
     const request = parseAuthorizationRequestUrl(requestUrl);
@@ -135,11 +135,11 @@ export class Holder {
       | undefined;
     if (pd === undefined) {
       throw new HolderError(
-        "respondTo: only inline presentation_definition is supported in v1",
+        "holder.respond: only inline presentation_definition is supported in v1",
       );
     }
 
-    const credentials = await this.list();
+    const credentials = await this.credentials.list();
     const credentialViews: readonly (StoredCredential & SdJwtVcCredentialView)[] =
       credentials as readonly (StoredCredential & SdJwtVcCredentialView)[];
 
@@ -166,12 +166,12 @@ export class Holder {
     if (!selection.fullySatisfied) {
       const ids = selection.unmatched.map((u) => u.descriptor.id).join(", ");
       throw new HolderError(
-        `respondTo: cannot satisfy presentation_definition — unmatched descriptors: ${ids}`,
+        `holder.respond: cannot satisfy presentation_definition — unmatched descriptors: ${ids}`,
       );
     }
     if (selection.matches.length > 1) {
       throw new HolderError(
-        "respondTo: multi-credential responses are not yet supported in v1",
+        "holder.respond: multi-credential responses are not yet supported in v1",
       );
     }
 

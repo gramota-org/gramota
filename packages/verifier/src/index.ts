@@ -1,7 +1,7 @@
 export { Verifier, verify } from "./verifier.js";
 export type {
-  CreatePresentationRequestOptions,
-  CreatedPresentationRequest,
+  PresentationRequestOptions,
+  PresentationRequest,
   VerifyResponseOptions,
   VerifyResponseResult,
 } from "./verifier.js";

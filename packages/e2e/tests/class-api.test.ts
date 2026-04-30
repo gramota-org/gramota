@@ -18,7 +18,7 @@ const NOW_S = 1_700_000_050;
 const IAT_S = 1_700_000_000;
 
 describe("Class-based API — full OID4VP flow without standalone functions", () => {
-  it("verifier.createPresentationRequest → holder.respondTo → verifier.verifyPresentationResponse", async () => {
+  it("verifier.request → holder.respond → verifier.response", async () => {
     // ---- Setup ----
     const issuer = await newEs256KeyPair();
     const holderKey = await newEs256KeyPair();
@@ -45,7 +45,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    await holder.receive(token, { trustedIssuers: [issuer.publicJwk] });
+    await holder.credentials.receive(token, { trustedIssuers: [issuer.publicJwk] });
 
     // ---- VERIFIER builds the request URL via class method ----
     const audience = "https://my-bank.example.com";
@@ -54,7 +54,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       issuerKey: issuer.publicJwk,
     });
 
-    const created = verifier.createPresentationRequest({
+    const created = verifier.request({
       baseUrl: "openid4vp://authorize",
       nonce: "class-api-nonce",
       state: "class-api-state",
@@ -84,7 +84,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
     expect(created.request.response_mode).toBe("direct_post");
 
     // ---- HOLDER processes URL → produces response body via class method ----
-    const respond = await holder.respondTo(created.url, {
+    const respond = await holder.respond(created.url, {
       now: () => NOW_S - 5,
     });
 
@@ -94,7 +94,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
     expect(respond.body).toContain("state=class-api-state");
 
     // ---- VERIFIER verifies the response via class method ----
-    const result = await verifier.verifyPresentationResponse(respond.body, {
+    const result = await verifier.response(respond.body, {
       expectedNonce: "class-api-nonce",
       expectedState: "class-api-state",
       now: () => NOW_S,
@@ -130,13 +130,13 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    await holder.receive(token, { trustedIssuers: [issuer.publicJwk] });
+    await holder.credentials.receive(token, { trustedIssuers: [issuer.publicJwk] });
 
     const verifier = new Verifier({
       audience: "https://v.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const created = verifier.createPresentationRequest({
+    const created = verifier.request({
       baseUrl: "openid4vp://",
       nonce: "n",
       state: "expected-state",
@@ -152,11 +152,11 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       },
     });
 
-    const respond = await holder.respondTo(created.url, {
+    const respond = await holder.respond(created.url, {
       now: () => NOW_S - 5,
     });
 
-    const result = await verifier.verifyPresentationResponse(respond.body, {
+    const result = await verifier.response(respond.body, {
       expectedNonce: "n",
       expectedState: "WRONG-STATE",
       now: () => NOW_S,
@@ -187,13 +187,13 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       publicKey: holderKey.publicJwk,
       alg: "ES256",
     });
-    await holder.receive(token, { trustedIssuers: [issuer.publicJwk] });
+    await holder.credentials.receive(token, { trustedIssuers: [issuer.publicJwk] });
 
     const verifier = new Verifier({
       audience: "https://v.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const created = verifier.createPresentationRequest({
+    const created = verifier.request({
       baseUrl: "openid4vp://",
       nonce: "n",
       responseUri: "https://v.example.com/cb",
@@ -208,7 +208,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       },
     });
 
-    await expect(holder.respondTo(created.url)).rejects.toThrow(
+    await expect(holder.respond(created.url)).rejects.toThrow(
       /unmatched descriptors/,
     );
   });
