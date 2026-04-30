@@ -10,8 +10,14 @@ import {
 import {
   verifyJws,
   JoseVerificationError,
+  type JsonWebKey,
   type SupportedAlg,
 } from "@gateway/jose";
+import {
+  StaticTrustResolver,
+  TrustResolutionError,
+  type TrustResolver,
+} from "@gateway/trust";
 import {
   VerificationError,
   type FailureResult,
@@ -28,7 +34,7 @@ const DEFAULT_CLOCK_SKEW_S = 30;
 
 export class Verifier {
   private readonly audience: string;
-  private readonly issuerKey: VerifierConfig["issuerKey"];
+  private readonly trust: TrustResolver;
   private readonly algorithms: readonly SupportedAlg[] | undefined;
   private readonly maxKbJwtAgeSeconds: number;
   private readonly maxClockSkewSeconds: number;
@@ -37,11 +43,28 @@ export class Verifier {
     if (typeof config.audience !== "string" || config.audience.length === 0) {
       throw new TypeError("Verifier: audience is required");
     }
-    if (config.issuerKey === null || typeof config.issuerKey !== "object") {
-      throw new TypeError("Verifier: issuerKey is required (a JsonWebKey)");
+
+    const hasKey =
+      config.issuerKey !== undefined &&
+      config.issuerKey !== null &&
+      typeof config.issuerKey === "object";
+    const hasTrust = config.trust !== undefined;
+
+    if (hasKey && hasTrust) {
+      throw new TypeError(
+        "Verifier: pass exactly one of issuerKey (shorthand) OR trust (resolver), not both",
+      );
     }
+    if (!hasKey && !hasTrust) {
+      throw new TypeError(
+        "Verifier: one of issuerKey (shorthand) or trust (resolver) is required",
+      );
+    }
+
     this.audience = config.audience;
-    this.issuerKey = config.issuerKey;
+    this.trust = hasTrust
+      ? (config.trust as TrustResolver)
+      : new StaticTrustResolver([config.issuerKey as JsonWebKey]);
     this.algorithms = config.algorithms;
     this.maxKbJwtAgeSeconds =
       config.maxKbJwtAgeSeconds ?? DEFAULT_MAX_AGE_S;
@@ -75,21 +98,65 @@ export class Verifier {
       return makeFailure(checks, "structure.parse", describe(err));
     }
 
-    // 2. Verify the issuer signature
+    // 2a. Resolve trusted issuer keys via the configured TrustResolver
+    let candidateKeys;
     try {
-      const verifyOpts: { algorithms?: readonly SupportedAlg[] } = {};
-      if (this.algorithms !== undefined) {
-        verifyOpts.algorithms = this.algorithms;
+      const iss =
+        typeof parsed.payload["iss"] === "string"
+          ? parsed.payload["iss"]
+          : undefined;
+      const kid =
+        typeof parsed.header["kid"] === "string"
+          ? parsed.header["kid"]
+          : undefined;
+
+      const trustContext: {
+        iss: string | undefined;
+        kid: string | undefined;
+        header: Record<string, unknown>;
+      } = {
+        iss,
+        kid,
+        header: parsed.header as Record<string, unknown>,
+      };
+      candidateKeys = await this.trust.resolveIssuerKeys(trustContext);
+      if (candidateKeys.length === 0) {
+        return makeFailure(
+          checks,
+          "trust.resolution",
+          "trust resolver returned no candidate keys",
+        );
       }
-      await verifyJws(
-        `${parsed.signedPayload}.${parsed.signature}`,
-        this.issuerKey,
-        verifyOpts,
-      );
-      record(checks, "issuer.signature", true);
+      record(checks, "trust.resolution", true);
     } catch (err) {
-      return makeFailure(checks, "issuer.signature", describe(err));
+      return makeFailure(checks, "trust.resolution", describe(err));
     }
+
+    // 2b. Verify the issuer signature against any of the candidate keys
+    const issuerJws = `${parsed.signedPayload}.${parsed.signature}`;
+    const verifyOpts: { algorithms?: readonly SupportedAlg[] } = {};
+    if (this.algorithms !== undefined) {
+      verifyOpts.algorithms = this.algorithms;
+    }
+    let verifiedAny = false;
+    let lastSignatureError: unknown;
+    for (const key of candidateKeys) {
+      try {
+        await verifyJws(issuerJws, key, verifyOpts);
+        verifiedAny = true;
+        break;
+      } catch (err) {
+        lastSignatureError = err;
+      }
+    }
+    if (!verifiedAny) {
+      return makeFailure(
+        checks,
+        "issuer.signature",
+        describe(lastSignatureError),
+      );
+    }
+    record(checks, "issuer.signature", true);
 
     // 3. Verify hash binding (disclosures match _sd digests, no forgery)
     let verifiedSdJwt;
@@ -233,6 +300,7 @@ function describe(err: unknown): string {
     err instanceof SdJwtVerificationError ||
     err instanceof SdJwtKeyBindingError ||
     err instanceof JoseVerificationError ||
+    err instanceof TrustResolutionError ||
     err instanceof Error
   ) {
     return err.message;

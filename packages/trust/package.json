@@ -1,7 +1,7 @@
 {
-  "name": "@gateway/verifier",
+  "name": "@gateway/trust",
   "version": "0.0.0",
-  "description": "Relying-party verifier for the EU Digital Identity Wallet. One client, one method, full IETF SD-JWT-VC + KB-JWT spec compliance.",
+  "description": "Pluggable trust resolution for EUDIW issuers — static lists, JWKS URLs, future EU Trusted List support.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,11 +18,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/jose": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*",
-    "@gateway/trust": "workspace:*"
-  },
-  "devDependencies": {
-    "jose": "^5.9.6"
+    "@gateway/jose": "workspace:*"
   }
 }

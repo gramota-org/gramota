@@ -53,6 +53,12 @@ importers:
         specifier: ^5.9.6
         version: 5.10.0
 
+  packages/trust:
+    dependencies:
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+
   packages/verifier:
     dependencies:
       '@gateway/jose':
@@ -61,6 +67,9 @@ importers:
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
+      '@gateway/trust':
+        specifier: workspace:*
+        version: link:../trust
     devDependencies:
       jose:
         specifier: ^5.9.6

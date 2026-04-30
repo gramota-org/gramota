@@ -157,6 +157,7 @@ describe("Verifier — happy path", () => {
 
     const expected = [
       "structure.parse",
+      "trust.resolution",
       "issuer.signature",
       "hash-binding.disclosures",
       "kb-jwt.present",
@@ -387,11 +388,50 @@ describe("Verifier — configuration", () => {
     ).toThrow(/audience/);
   });
 
-  it("rejects construction without issuerKey", () => {
+  it("rejects construction with neither issuerKey nor trust", () => {
     expect(
-      // @ts-expect-error: missing required field
       () => new Verifier({ audience: AUDIENCE }),
-    ).toThrow(/issuerKey/);
+    ).toThrow(/issuerKey.*trust/);
+  });
+
+  it("rejects construction with both issuerKey AND trust", async () => {
+    const s = await setup();
+    const { StaticTrustResolver } = await import("@gateway/trust");
+    expect(
+      () =>
+        new Verifier({
+          audience: AUDIENCE,
+          issuerKey: s.issuerPub,
+          trust: new StaticTrustResolver([s.issuerPub]),
+        }),
+    ).toThrow(/exactly one/);
+  });
+
+  it("accepts a TrustResolver via the trust option", async () => {
+    const s = await setup();
+    const { StaticTrustResolver } = await import("@gateway/trust");
+    const v = new Verifier({
+      audience: AUDIENCE,
+      trust: new StaticTrustResolver([s.issuerPub]),
+    });
+    const result = await v.verify(s.presentationToken, baseOpts());
+    expect(result.ok).toBe(true);
+  });
+
+  it("trust.resolution failure is a distinct check name", async () => {
+    const s = await setup();
+    const { StaticTrustResolver } = await import("@gateway/trust");
+    // Configured per-issuer for a different iss → resolution will fail.
+    const v = new Verifier({
+      audience: AUDIENCE,
+      trust: new StaticTrustResolver({
+        "https://other-issuer.example.com": [s.issuerPub],
+      }),
+    });
+    const result = await v.verify(s.presentationToken, baseOpts());
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.failedCheck).toBe("trust.resolution");
   });
 
   it("respects custom algorithms allowlist", async () => {

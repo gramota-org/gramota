@@ -1,24 +1,27 @@
 import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
+import type { TrustResolver } from "@gateway/trust";
 
-/** Configuration for a Verifier instance. Most fields have safe defaults; the
- * required ones are the verifier's identity (`audience`) and the issuer's
- * public key (`issuerKey`). */
+/** Configuration for a Verifier instance. */
 export interface VerifierConfig {
   /** The verifier's identifier. The KB-JWT's `aud` claim MUST equal this.
    * Cross-verifier replay protection — pick a stable, app-specific URL. */
   audience: string;
 
-  /** The trusted issuer's public JWK. v1 supports a single issuer per
-   * Verifier; v2 will resolve from the EU Trusted List. */
-  issuerKey: JsonWebKey;
+  /** Exactly one of `issuerKey` (shorthand) OR `trust` (full resolver) is
+   * required. */
+  issuerKey?: JsonWebKey;
+
+  /** Pluggable trust resolution. Use `StaticTrustResolver` for hard-coded
+   * keys, `JwksUrlTrustResolver` for runtime JWKS fetching, or any custom
+   * implementation of the `TrustResolver` interface. */
+  trust?: TrustResolver;
 
   /** JWS algorithm allowlist for both issuer and KB-JWT signatures.
    * Default: every IETF asymmetric algorithm we support.
    * `alg=none` is *never* permitted, regardless of this list. */
   algorithms?: readonly SupportedAlg[];
 
-  /** Maximum acceptable age of the KB-JWT, in seconds. Default 60.
-   * Older KB-JWTs are rejected as potential replays. */
+  /** Maximum acceptable age of the KB-JWT, in seconds. Default 60. */
   maxKbJwtAgeSeconds?: number;
 
   /** Maximum acceptable clock skew (KB-JWT `iat` in the future), in seconds.
@@ -48,9 +51,10 @@ export interface SecurityCheck {
   message?: string;
 }
 
-/** Stable identifiers for the 9 security checks we run, in execution order. */
+/** Stable identifiers for the security checks we run, in execution order. */
 export type SecurityCheckName =
   | "structure.parse"
+  | "trust.resolution"
   | "issuer.signature"
   | "hash-binding.disclosures"
   | "kb-jwt.present"

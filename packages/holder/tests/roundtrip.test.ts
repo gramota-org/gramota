@@ -117,7 +117,7 @@ describe("Issuer → Holder → Verifier roundtrip", () => {
     expect(result.metadata.audience).toBe(audience);
     expect(result.metadata.holderKey).toEqual(holderKey.pub);
 
-    expect(result.checks).toHaveLength(10);
+    expect(result.checks).toHaveLength(11);
     expect(result.checks.every((c) => c.passed)).toBe(true);
   });
 
