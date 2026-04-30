@@ -1,0 +1,28 @@
+{
+  "name": "@gateway/holder",
+  "version": "0.0.0",
+  "description": "Headless EUDIW holder/wallet — receive credentials, store them, build presentations. Pure Node, no UI, IETF SD-JWT-VC §6 compliant.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@gateway/jose": "workspace:*",
+    "@gateway/sd-jwt": "workspace:*"
+  },
+  "devDependencies": {
+    "@gateway/verifier": "workspace:*",
+    "jose": "^5.9.6"
+  }
+}
