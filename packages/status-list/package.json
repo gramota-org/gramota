@@ -1,7 +1,7 @@
 {
-  "name": "@gateway/verifier",
+  "name": "@gateway/status-list",
   "version": "0.0.0",
-  "description": "Relying-party verifier for the EU Digital Identity Wallet. One client, one method, full IETF SD-JWT-VC + KB-JWT spec compliance.",
+  "description": "IETF Token Status List — credential revocation/suspension checks for SD-JWT-VC.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,10 +19,7 @@
   },
   "dependencies": {
     "@gateway/jose": "workspace:*",
-    "@gateway/oid4vp": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*",
-    "@gateway/status-list": "workspace:*",
-    "@gateway/trust": "workspace:*"
+    "@gateway/sd-jwt": "workspace:*"
   },
   "devDependencies": {
     "@gateway/issuer": "workspace:*",

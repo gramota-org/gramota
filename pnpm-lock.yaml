@@ -57,6 +57,9 @@ importers:
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
+      '@gateway/status-list':
+        specifier: workspace:*
+        version: link:../status-list
       '@gateway/trust':
         specifier: workspace:*
         version: link:../trust
@@ -149,6 +152,22 @@ importers:
         specifier: ^5.9.6
         version: 5.10.0
 
+  packages/status-list:
+    dependencies:
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
+    devDependencies:
+      '@gateway/issuer':
+        specifier: workspace:*
+        version: link:../issuer
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
   packages/trust:
     dependencies:
       '@gateway/jose':
@@ -166,10 +185,16 @@ importers:
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
+      '@gateway/status-list':
+        specifier: workspace:*
+        version: link:../status-list
       '@gateway/trust':
         specifier: workspace:*
         version: link:../trust
     devDependencies:
+      '@gateway/issuer':
+        specifier: workspace:*
+        version: link:../issuer
       jose:
         specifier: ^5.9.6
         version: 5.10.0

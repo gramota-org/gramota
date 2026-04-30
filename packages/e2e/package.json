@@ -18,6 +18,7 @@
     "@gateway/oid4vp": "workspace:*",
     "@gateway/presentation-exchange": "workspace:*",
     "@gateway/sd-jwt": "workspace:*",
+    "@gateway/status-list": "workspace:*",
     "@gateway/trust": "workspace:*",
     "@gateway/verifier": "workspace:*"
   },

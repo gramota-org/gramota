@@ -1,5 +1,10 @@
 import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
 import type { TrustResolver } from "@gateway/trust";
+import type {
+  CredentialStatusResult,
+  Fetcher as StatusListFetcher,
+  StatusList,
+} from "@gateway/status-list";
 
 /** Configuration for a Verifier instance. */
 export interface VerifierConfig {
@@ -38,6 +43,32 @@ export interface VerifyOptions {
   /** Override "now" — used for tests and time-frozen environments. Returns
    * Unix seconds. Default: `Math.floor(Date.now() / 1000)`. */
   now?: () => number;
+
+  /**
+   * IETF Token Status List revocation/suspension check.
+   *
+   * - Omit to skip (verifier doesn't fetch any status list).
+   * - Pass an object to enable. The credential's status reference is
+   *   resolved, the list is fetched + signature-verified, and the result
+   *   surfaces in `result.status` and `result.checks`.
+   *
+   * Set `required: true` to fail when the credential has no status
+   * reference (some issuers will only opt-in for revocable credentials).
+   */
+  status?: StatusCheckOptions;
+}
+
+/** Options for the optional `verifier.verify(..., { status: ... })` step. */
+export interface StatusCheckOptions {
+  /** Trusted JWKs the status-list signature must verify against. */
+  trustedIssuers: readonly JsonWebKey[];
+  /** When true, credentials without a `status` claim fail verification.
+   * When false/omitted, missing status is treated as "skipped". */
+  required?: boolean;
+  /** Override fetch — for tests. */
+  fetcher?: StatusListFetcher;
+  /** A pre-fetched/cached status list — skip the network when provided. */
+  list?: StatusList;
 }
 
 /** A single security check, recorded for observability. Every check is
@@ -63,7 +94,8 @@ export type SecurityCheckName =
   | "kb-jwt.audience"
   | "kb-jwt.nonce"
   | "kb-jwt.time"
-  | "kb-jwt.transcript";
+  | "kb-jwt.transcript"
+  | "status.check";
 
 /** Protocol metadata extracted alongside the user-facing claims. */
 export interface VerificationMetadata {
@@ -90,6 +122,10 @@ export interface SuccessResult<TClaims = Record<string, unknown>> {
   metadata: VerificationMetadata;
   /** Every check we ran, all passed. Useful for audit trails. */
   checks: readonly SecurityCheck[];
+  /** When `options.status` was supplied, the resolved status (or
+   * "skipped" if the credential carried no status reference). Absent
+   * when status checking wasn't requested. */
+  status?: CredentialStatusResult | "skipped";
   /** Returns claims; never throws on success. */
   unwrap(): TClaims;
 }

@@ -25,6 +25,11 @@ import {
   type AuthorizationResponse,
 } from "@gateway/oid4vp";
 import {
+  StatusListError,
+  checkCredentialStatus,
+  type CredentialStatusResult,
+} from "@gateway/status-list";
+import {
   VerificationError,
   type FailureResult,
   type SecurityCheck,
@@ -218,6 +223,56 @@ export class Verifier {
       );
     }
 
+    // 10. Optional status check (IETF Token Status List).
+    let statusResult: CredentialStatusResult | "skipped" | undefined;
+    if (options.status !== undefined) {
+      const checkOpts: Parameters<typeof checkCredentialStatus>[1] = {
+        trustedIssuers: options.status.trustedIssuers,
+      };
+      if (options.status.fetcher !== undefined) {
+        checkOpts.fetcher = options.status.fetcher;
+      }
+      if (options.status.list !== undefined) {
+        checkOpts.list = options.status.list;
+      }
+      if (options.now !== undefined) checkOpts.now = options.now;
+
+      try {
+        statusResult = await checkCredentialStatus(parsed, checkOpts);
+        if (statusResult.state !== "valid") {
+          return makeFailure(
+            checks,
+            "status.check",
+            `credential status is '${statusResult.state}' (code=${statusResult.code})`,
+          );
+        }
+        record(checks, "status.check", true);
+      } catch (err) {
+        // Distinguish "no status claim" from any other failure.
+        if (
+          err instanceof StatusListError &&
+          err.code === "status_list.no_status_reference"
+        ) {
+          if (options.status.required) {
+            return makeFailure(
+              checks,
+              "status.check",
+              "credential has no status reference but options.status.required = true",
+            );
+          }
+          statusResult = "skipped";
+          record(
+            checks,
+            "status.check",
+            true,
+            "credential has no status reference (issuer didn't opt in)",
+          );
+        } else {
+          return makeFailure(checks, "status.check", describe(err));
+        }
+      }
+    }
+
     // All checks passed — assemble the success result.
     const claims = stripMetadata(verifiedSdJwt.claims) as TClaims;
     const metadata = extractMetadata(
@@ -234,6 +289,7 @@ export class Verifier {
       checks: Object.freeze(checks),
       unwrap: () => claims,
     };
+    if (statusResult !== undefined) success.status = statusResult;
     return success;
   }
 
@@ -347,6 +403,7 @@ export class Verifier {
 
     const verifyOpts: VerifyOptions = { nonce: options.expectedNonce };
     if (options.now !== undefined) verifyOpts.now = options.now;
+    if (options.status !== undefined) verifyOpts.status = options.status;
     const baseResult = await this.verify<TClaims>(vpToken, verifyOpts);
 
     return Object.assign({}, baseResult, {
@@ -403,6 +460,8 @@ export interface VerifyResponseOptions {
   expectedState?: string;
   /** Override "now" — for tests. */
   now?: () => number;
+  /** Forwarded to `verify()` — opt-in IETF Token Status List check. */
+  status?: VerifyOptions["status"];
 }
 
 /** Standalone one-off verification — same semantics as Verifier.verify, but
