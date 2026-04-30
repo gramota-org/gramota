@@ -32,6 +32,9 @@ importers:
       '@gateway/oid4vp':
         specifier: workspace:*
         version: link:../oid4vp
+      '@gateway/presentation-exchange':
+        specifier: workspace:*
+        version: link:../presentation-exchange
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
@@ -51,6 +54,12 @@ importers:
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose
+      '@gateway/oid4vp':
+        specifier: workspace:*
+        version: link:../oid4vp
+      '@gateway/presentation-exchange':
+        specifier: workspace:*
+        version: link:../presentation-exchange
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
@@ -69,6 +78,12 @@ importers:
         version: 5.10.0
 
   packages/oid4vp: {}
+
+  packages/presentation-exchange:
+    dependencies:
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
 
   packages/sd-jwt:
     dependencies:
@@ -91,6 +106,9 @@ importers:
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose
+      '@gateway/oid4vp':
+        specifier: workspace:*
+        version: link:../oid4vp
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt

@@ -19,6 +19,12 @@ import {
   type TrustResolver,
 } from "@gateway/trust";
 import {
+  buildAuthorizationRequestUrl,
+  parseAuthorizationResponseBody,
+  type AuthorizationRequest,
+  type AuthorizationResponse,
+} from "@gateway/oid4vp";
+import {
   VerificationError,
   type FailureResult,
   type SecurityCheck,
@@ -230,6 +236,183 @@ export class Verifier {
     };
     return success;
   }
+
+  /**
+   * Build an OID4VP Authorization Request URL to share with the wallet.
+   * Returns the URL plus the structured request object — store the nonce and
+   * state alongside the user's session so you can match them on callback.
+   */
+  createPresentationRequest(
+    options: CreatePresentationRequestOptions,
+  ): CreatedPresentationRequest {
+    if (typeof options.baseUrl !== "string" || options.baseUrl.length === 0) {
+      throw new TypeError("createPresentationRequest: baseUrl is required");
+    }
+    if (typeof options.nonce !== "string" || options.nonce.length === 0) {
+      throw new TypeError("createPresentationRequest: nonce is required");
+    }
+    if (
+      options.presentationDefinition !== undefined &&
+      options.presentationDefinitionUri !== undefined
+    ) {
+      throw new TypeError(
+        "presentationDefinition and presentationDefinitionUri are mutually exclusive",
+      );
+    }
+
+    const responseMode =
+      options.responseMode ??
+      (options.responseUri !== undefined ? "direct_post" : undefined);
+
+    const request: AuthorizationRequest = {
+      response_type: "vp_token",
+      client_id: options.clientId ?? this.audience,
+      client_id_scheme: options.clientIdScheme ?? "redirect_uri",
+      nonce: options.nonce,
+    };
+    if (options.state !== undefined) request.state = options.state;
+    if (responseMode !== undefined) request.response_mode = responseMode;
+    if (options.responseUri !== undefined) {
+      request.response_uri = options.responseUri;
+    }
+    if (options.presentationDefinition !== undefined) {
+      request.presentation_definition = options.presentationDefinition;
+    }
+    if (options.presentationDefinitionUri !== undefined) {
+      request.presentation_definition_uri = options.presentationDefinitionUri;
+    }
+
+    const url = buildAuthorizationRequestUrl(options.baseUrl, request);
+
+    return {
+      url,
+      request,
+      nonce: options.nonce,
+      state: options.state,
+    };
+  }
+
+  /**
+   * Parse a wallet's OID4VP Authorization Response body and verify the
+   * vp_token cryptographically. Combines wire-format parsing, CSRF state
+   * matching, and full SD-JWT-VC verification into one call.
+   *
+   * Returns the same result shape as `verify()` plus the parsed transport
+   * envelope (presentation_submission, iss, state).
+   */
+  async verifyPresentationResponse<TClaims = Record<string, unknown>>(
+    rawBody: string | URLSearchParams | Record<string, string>,
+    options: VerifyResponseOptions,
+  ): Promise<VerifyResponseResult<TClaims>> {
+    if (
+      typeof options.expectedNonce !== "string" ||
+      options.expectedNonce.length === 0
+    ) {
+      throw new TypeError(
+        "verifyPresentationResponse: expectedNonce is required",
+      );
+    }
+
+    let response: AuthorizationResponse;
+    try {
+      response =
+        typeof rawBody === "string"
+          ? parseAuthorizationResponseBody(rawBody)
+          : (await import("@gateway/oid4vp")).parseAuthorizationResponseFromParams(
+              rawBody,
+            );
+    } catch (err) {
+      const checks: SecurityCheck[] = [];
+      return makeFailure(
+        checks,
+        "structure.parse",
+        err instanceof Error ? err.message : String(err),
+      ) as VerifyResponseResult<TClaims>;
+    }
+
+    // CSRF state matching is application-level but we offer it as a default
+    // safety belt — opt out by omitting expectedState.
+    if (
+      options.expectedState !== undefined &&
+      response.state !== options.expectedState
+    ) {
+      const checks: SecurityCheck[] = [];
+      return makeFailure(
+        checks,
+        "structure.parse",
+        `OID4VP state mismatch — expected '${options.expectedState}', got '${response.state ?? "<missing>"}'`,
+      ) as VerifyResponseResult<TClaims>;
+    }
+
+    // v1 supports single-token responses; multi-token coming with full DIF PE.
+    if (typeof response.vp_token !== "string") {
+      const checks: SecurityCheck[] = [];
+      return makeFailure(
+        checks,
+        "structure.parse",
+        "multi-credential vp_token arrays are not yet supported in v1",
+      ) as VerifyResponseResult<TClaims>;
+    }
+    const vpToken = response.vp_token;
+
+    const verifyOpts: VerifyOptions = { nonce: options.expectedNonce };
+    if (options.now !== undefined) verifyOpts.now = options.now;
+    const baseResult = await this.verify<TClaims>(vpToken, verifyOpts);
+
+    return Object.assign({}, baseResult, {
+      response,
+    }) as VerifyResponseResult<TClaims>;
+  }
+}
+
+/** Result of `verifier.verifyPresentationResponse()` — same shape as
+ * `VerifyResult` plus the parsed OID4VP transport envelope. */
+export type VerifyResponseResult<TClaims = Record<string, unknown>> =
+  VerifyResult<TClaims> & { response?: AuthorizationResponse };
+
+/** Options for `verifier.createPresentationRequest()`. */
+export interface CreatePresentationRequestOptions {
+  /** Base URL or scheme: `openid4vp://authorize`, `https://wallet.example.com/...` */
+  baseUrl: string;
+  /** OID4VP nonce. If omitted, the caller MUST set it explicitly via `request.nonce`. */
+  nonce: string;
+  /** Optional opaque CSRF state echoed back unchanged in the response. */
+  state?: string;
+  /** `direct_post` callback URL (required when response_mode=direct_post). */
+  responseUri?: string;
+  /** Inline DIF Presentation Definition. */
+  presentationDefinition?: Readonly<Record<string, unknown>>;
+  /** Or a URL the wallet can fetch the PD from. Mutually exclusive with above. */
+  presentationDefinitionUri?: string;
+  /** Override request_mode (default: direct_post when responseUri is set,
+   * otherwise undefined). */
+  responseMode?: "direct_post" | "direct_post.jwt" | "fragment" | "query";
+  /** client_id_scheme (default: redirect_uri). */
+  clientIdScheme?: string;
+  /** Override the client_id (defaults to the verifier's audience). */
+  clientId?: string;
+}
+
+/** Result of `verifier.createPresentationRequest()`. */
+export interface CreatedPresentationRequest {
+  /** The full URL to share with the wallet (QR / deep link). */
+  url: string;
+  /** The structured AuthorizationRequest, useful for storage and logging. */
+  request: AuthorizationRequest;
+  /** Echoes the nonce so callers can persist it for later verification. */
+  nonce: string;
+  /** Echoes the state if one was supplied. */
+  state: string | undefined;
+}
+
+/** Options for `verifier.verifyPresentationResponse()`. */
+export interface VerifyResponseOptions {
+  /** Required — the nonce used in the original request. */
+  expectedNonce: string;
+  /** Optional — when supplied, response.state MUST equal this. */
+  expectedState?: string;
+  /** Override "now" — for tests. */
+  now?: () => number;
 }
 
 /** Standalone one-off verification — same semantics as Verifier.verify, but

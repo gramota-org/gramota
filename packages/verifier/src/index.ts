@@ -1,4 +1,10 @@
 export { Verifier, verify } from "./verifier.js";
+export type {
+  CreatePresentationRequestOptions,
+  CreatedPresentationRequest,
+  VerifyResponseOptions,
+  VerifyResponseResult,
+} from "./verifier.js";
 export { inspect } from "./inspect.js";
 export { VerificationError } from "./types.js";
 export type {

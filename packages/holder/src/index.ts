@@ -1,4 +1,5 @@
 export { Holder, HolderError } from "./holder.js";
+export type { RespondToOptions, RespondToResult } from "./holder.js";
 export { InMemoryCredentialStore } from "./store/memory.js";
 export type {
   CredentialId,
