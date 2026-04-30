@@ -29,6 +29,9 @@ importers:
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose
+      '@gateway/oid4vp':
+        specifier: workspace:*
+        version: link:../oid4vp
       '@gateway/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
@@ -64,6 +67,8 @@ importers:
       jose:
         specifier: ^5.9.6
         version: 5.10.0
+
+  packages/oid4vp: {}
 
   packages/sd-jwt:
     dependencies:

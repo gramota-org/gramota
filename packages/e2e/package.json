@@ -12,6 +12,7 @@
   "dependencies": {
     "@gateway/holder": "workspace:*",
     "@gateway/jose": "workspace:*",
+    "@gateway/oid4vp": "workspace:*",
     "@gateway/sd-jwt": "workspace:*",
     "@gateway/trust": "workspace:*",
     "@gateway/verifier": "workspace:*"
