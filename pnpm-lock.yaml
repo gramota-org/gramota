@@ -26,6 +26,9 @@ importers:
       '@gateway/holder':
         specifier: workspace:*
         version: link:../holder
+      '@gateway/issuer':
+        specifier: workspace:*
+        version: link:../issuer
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose
@@ -67,6 +70,19 @@ importers:
       '@gateway/verifier':
         specifier: workspace:*
         version: link:../verifier
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
+  packages/issuer:
+    dependencies:
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
+    devDependencies:
       jose:
         specifier: ^5.9.6
         version: 5.10.0
