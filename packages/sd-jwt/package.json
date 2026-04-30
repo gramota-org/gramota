@@ -16,5 +16,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@gateway/jose": "workspace:*"
+  },
+  "devDependencies": {
+    "jose": "^5.9.6"
   }
 }

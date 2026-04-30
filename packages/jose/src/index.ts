@@ -1,4 +1,6 @@
 export { verifyJws } from "./verify.js";
+export { signJws } from "./sign.js";
+export type { SignJwsOptions } from "./sign.js";
 export type {
   JsonWebKey,
   SupportedAlg,

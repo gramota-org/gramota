@@ -29,12 +29,20 @@ export function parseSdJwt(token: string): ParsedSdJwt {
   const { header, payload, signature, signedPayload } = parseJwt(jwtPart);
   const disclosures = disclosureSegments.map(parseDisclosure);
 
+  // Per IETF SD-JWT §4.3, sd_hash is computed over the presentation MINUS the
+  // KB-JWT — i.e. <issuer-jws>~<d1>~...~<dN>~ (always ends with `~`).
+  const presentationPrefix =
+    keyBindingJwt !== undefined
+      ? token.substring(0, token.length - keyBindingJwt.length)
+      : token;
+
   const result: ParsedSdJwt = {
     header,
     payload,
     signature,
     signedPayload,
     disclosures,
+    presentationPrefix,
   };
   if (keyBindingJwt !== undefined) {
     result.keyBindingJwt = keyBindingJwt;

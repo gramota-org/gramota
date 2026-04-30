@@ -27,7 +27,15 @@ importers:
         specifier: ^5.9.6
         version: 5.10.0
 
-  packages/sd-jwt: {}
+  packages/sd-jwt:
+    dependencies:
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+    devDependencies:
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
 
 packages:
 

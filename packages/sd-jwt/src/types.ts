@@ -34,6 +34,23 @@ export interface ParsedSdJwt {
   signedPayload: string;
   disclosures: SdJwtDisclosure[];
   keyBindingJwt?: string;
+  /** The exact bytes the KB-JWT's `sd_hash` is computed over: the issuer JWS
+   * plus every presented disclosure plus separator tildes, ending with `~`.
+   * Per IETF SD-JWT §4.3: `sd_hash = base64url(SHA-256(presentationPrefix))`. */
+  presentationPrefix: string;
+}
+
+/** Verified Key Binding JWT contents per IETF SD-JWT §4.3. */
+export interface VerifiedKeyBinding {
+  header: { typ: "kb+jwt"; alg: string };
+  payload: {
+    iat: number;
+    aud: string;
+    nonce: string;
+    sd_hash: string;
+  };
+  /** The holder JWK extracted from the parent SD-JWT's `cnf.jwk` claim. */
+  holderKey: Record<string, unknown>;
 }
 
 export interface VerifiedSdJwt {
