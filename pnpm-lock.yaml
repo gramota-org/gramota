@@ -37,6 +37,19 @@ importers:
         specifier: ^5.9.6
         version: 5.10.0
 
+  packages/verifier:
+    dependencies:
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
+    devDependencies:
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
 packages:
 
   '@ampproject/remapping@2.3.0':

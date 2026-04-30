@@ -1,0 +1,27 @@
+{
+  "name": "@gateway/verifier",
+  "version": "0.0.0",
+  "description": "Relying-party verifier for the EU Digital Identity Wallet. One client, one method, full IETF SD-JWT-VC + KB-JWT spec compliance.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@gateway/jose": "workspace:*",
+    "@gateway/sd-jwt": "workspace:*"
+  },
+  "devDependencies": {
+    "jose": "^5.9.6"
+  }
+}
