@@ -7,7 +7,12 @@ import {
 import {
   Oid4vciClient,
   type AcceptOfferOptions,
+  type AuthorizationServerMetadata,
+  type AuthorizeOfferOptions,
+  type AuthorizeOfferResult,
   type CredentialOffer,
+  type Fetcher,
+  type IssuerMetadata,
 } from "@gateway/oid4vci";
 import {
   buildPresentationSubmission,
@@ -34,10 +39,27 @@ export interface OffersApi {
   /** Parse a credential offer URL with no network I/O — preview an offer
    * before deciding to accept it. */
   parse(url: string): CredentialOffer;
-  /** Accept a credential offer end-to-end: parse → fetch metadata → token →
-   * proof JWT → credential request → validate → store. Returns the
-   * StoredCredential, same shape as `holder.credentials.receive`. */
+  /** Accept a credential offer end-to-end via the pre-authorized code flow:
+   * parse → fetch metadata → token → proof JWT → credential request →
+   * validate → store. Returns the StoredCredential, same shape as
+   * `holder.credentials.receive`. Throws if the offer doesn't include a
+   * pre-authorized_code grant — use `authorize` + `claim` for auth-code. */
   accept(url: string, options: AcceptOptions): Promise<StoredCredential>;
+  /**
+   * Step 1 of the OID4VCI auth-code flow. Returns the URL the wallet must
+   * navigate the user to, plus PKCE+state secrets to keep until step 2.
+   * The Holder caches flow context (metadata, offer, redirect_uri,
+   * client_id) keyed by `state`, so step 2 only needs the callback +
+   * verifier + state.
+   */
+  authorize(
+    url: string,
+    options: AuthorizeOptions,
+  ): Promise<AuthorizeResult>;
+  /** Step 2: exchange the issuer's redirect-callback for a credential,
+   * validate it against `trustedIssuers`, and store it. Looks up the
+   * pending flow by `state` (same value passed to/from `authorize`). */
+  claim(options: ClaimOptions): Promise<StoredCredential>;
 }
 
 /** Options for `holder.offers.accept()`. Extends OID4VCI's accept options
@@ -46,6 +68,53 @@ export interface AcceptOptions extends AcceptOfferOptions {
   /** Trusted issuer JWKs the received credential's signature must verify
    * against. The credential is rejected if it does not. */
   trustedIssuers: readonly JsonWebKey[];
+}
+
+/** Options for `holder.offers.authorize()`. */
+export interface AuthorizeOptions {
+  /** Where the issuer should redirect the user after consent. Must match
+   * a redirect URI registered with / accepted by the issuer. */
+  redirectUri: string;
+  /** OAuth `client_id`. Defaults to `redirectUri` (a common public-client
+   * pattern when the wallet has no separate registered identifier). */
+  clientId?: string;
+  /** Override which credential to request. Default: first id from the offer. */
+  credentialConfigurationId?: string;
+  /** Optional OAuth scope. */
+  scope?: string;
+  /** Optional pre-existing PKCE verifier — for tests. Default: random. */
+  codeVerifier?: string;
+  /** Optional pre-existing CSRF state — for tests. Default: random. */
+  state?: string;
+  /** Optional fetcher override. */
+  fetcher?: Fetcher;
+}
+
+/** Result of `holder.offers.authorize()`. */
+export interface AuthorizeResult {
+  /** Open this URL in the user's browser. */
+  authorizationUrl: string;
+  /** Persist with the user's session — passed to `claim`. */
+  codeVerifier: string;
+  /** Persist and verify against `?state=` on the callback. Doubles as
+   * the lookup key for the pending flow inside the Holder. */
+  state: string;
+}
+
+/** Options for `holder.offers.claim()`. */
+export interface ClaimOptions {
+  /** The full callback URL the issuer redirected to (with ?code=&state=). */
+  callbackUrl: string;
+  /** From `authorize`'s result. */
+  codeVerifier: string;
+  /** From `authorize`'s result. Used as lookup key for the pending flow. */
+  state: string;
+  /** Trusted issuer JWKs the received credential must verify against. */
+  trustedIssuers: readonly JsonWebKey[];
+  /** Optional fetcher override. */
+  fetcher?: Fetcher;
+  /** Override iat in the proof JWT — for tests. */
+  proofIat?: number;
 }
 
 /** Options for `holder.respondTo()`. */
@@ -94,14 +163,26 @@ export interface CredentialsApi {
  * pure functions (receive, buildPresentation) that don't need an instance —
  * easier to test, easier to reuse without classes.
  */
+/** Internal state held between `authorize()` and `claim()`. */
+interface PendingAuthCodeFlow {
+  metadata: IssuerMetadata;
+  authorizationServerMetadata: AuthorizationServerMetadata;
+  offer: CredentialOffer;
+  credentialConfigurationId: string;
+  redirectUri: string;
+  clientId: string;
+}
+
 export class Holder {
   private readonly config: HolderConfig;
   private readonly store: CredentialStore;
+  /** In-flight auth-code flows, keyed by `state`. Removed on `claim()`. */
+  private readonly pendingFlows = new Map<string, PendingAuthCodeFlow>();
 
   /** Credential CRUD. `holder.credentials.{receive, list, get, remove}(...)`. */
   readonly credentials: CredentialsApi;
 
-  /** OID4VCI offers. `holder.offers.{parse, accept}(...)`. */
+  /** OID4VCI offers. `holder.offers.{parse, accept, authorize, claim}(...)`. */
   readonly offers: OffersApi;
 
   constructor(config: HolderConfig) {
@@ -152,6 +233,107 @@ export class Holder {
 
         const result = await client.acceptOffer(url, acceptOpts);
         // Validate + store using the same path as credentials.receive.
+        return await receiveCredential(
+          result.credential,
+          this.config,
+          this.store,
+          { trustedIssuers: options.trustedIssuers },
+        );
+      },
+      authorize: async (url, options) => {
+        if (
+          typeof options.redirectUri !== "string" ||
+          options.redirectUri.length === 0
+        ) {
+          throw new HolderError(
+            "holder.invalid_input",
+            "offers.authorize: redirectUri is required",
+          );
+        }
+        const client = ensureClient();
+        const clientId = options.clientId ?? options.redirectUri;
+
+        const authOpts: AuthorizeOfferOptions = {
+          clientId,
+          redirectUri: options.redirectUri,
+        };
+        if (options.credentialConfigurationId !== undefined) {
+          authOpts.credentialConfigurationId = options.credentialConfigurationId;
+        }
+        if (options.codeVerifier !== undefined) {
+          authOpts.codeVerifier = options.codeVerifier;
+        }
+        if (options.state !== undefined) authOpts.state = options.state;
+        if (options.scope !== undefined) authOpts.scope = options.scope;
+        if (options.fetcher !== undefined) authOpts.fetcher = options.fetcher;
+
+        const started: AuthorizeOfferResult = await client.authorize(
+          url,
+          authOpts,
+        );
+
+        // Remember the per-flow context — so `claim` can look it up by state.
+        this.pendingFlows.set(started.state, {
+          metadata: started.metadata,
+          authorizationServerMetadata: started.authorizationServerMetadata,
+          offer: started.offer,
+          credentialConfigurationId: started.credentialConfigurationId,
+          redirectUri: options.redirectUri,
+          clientId,
+        });
+
+        return {
+          authorizationUrl: started.authorizationUrl,
+          codeVerifier: started.codeVerifier,
+          state: started.state,
+        };
+      },
+      claim: async (options) => {
+        if (
+          typeof options.state !== "string" ||
+          options.state.length === 0
+        ) {
+          throw new HolderError(
+            "holder.invalid_input",
+            "offers.claim: state is required",
+          );
+        }
+        const pending = this.pendingFlows.get(options.state);
+        if (pending === undefined) {
+          throw new HolderError(
+            "holder.unknown_flow",
+            "offers.claim: no pending auth-code flow for this state — call authorize() first",
+          );
+        }
+
+        const client = ensureClient();
+        const claimOpts: Parameters<Oid4vciClient["claim"]>[0] = {
+          callbackUrl: options.callbackUrl,
+          codeVerifier: options.codeVerifier,
+          state: options.state,
+          metadata: pending.metadata,
+          authorizationServerMetadata: pending.authorizationServerMetadata,
+          offer: pending.offer,
+          credentialConfigurationId: pending.credentialConfigurationId,
+          redirectUri: pending.redirectUri,
+          clientId: pending.clientId,
+        };
+        if (options.fetcher !== undefined) claimOpts.fetcher = options.fetcher;
+        if (options.proofIat !== undefined) claimOpts.proofIat = options.proofIat;
+
+        let result;
+        try {
+          result = await client.claim(claimOpts);
+        } catch (err) {
+          // If the issuer rejects (bad code, expired, etc.) the pending state
+          // is now useless — drop it so it can't be retried.
+          this.pendingFlows.delete(options.state);
+          throw err;
+        }
+
+        // Always free the pending state once we've used it (success or stored).
+        this.pendingFlows.delete(options.state);
+
         return await receiveCredential(
           result.credential,
           this.config,

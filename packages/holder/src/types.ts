@@ -86,7 +86,8 @@ export type HolderErrorCode =
   | "holder.disclosure_unavailable"
   | "holder.pd_unsatisfiable"
   | "holder.pd_required"
-  | "holder.multi_credential_unsupported";
+  | "holder.multi_credential_unsupported"
+  | "holder.unknown_flow";
 
 export class HolderError extends Error {
   override readonly name = "HolderError";

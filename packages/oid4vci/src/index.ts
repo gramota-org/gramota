@@ -18,9 +18,11 @@ export {
 } from "./offer.js";
 
 export {
+  fetchAuthorizationServerMetadata,
   fetchIssuerMetadata,
-  validateMetadata,
   resolveTokenEndpoint,
+  validateMetadata,
+  type AuthorizationServerMetadata,
   type Fetcher,
 } from "./metadata.js";
 
@@ -41,5 +43,25 @@ export {
   Oid4vciClient,
   type AcceptOfferOptions,
   type AcceptOfferResult,
+  type AuthorizeOfferOptions,
+  type AuthorizeOfferResult,
+  type ClaimOfferOptions,
   type Oid4vciClientConfig,
 } from "./client.js";
+
+export {
+  AUTHORIZATION_CODE_GRANT,
+  buildAuthorizationUrl,
+  parseAuthCallback,
+  requestTokenAuthCode,
+  type BuildAuthorizationUrlOptions,
+  type BuiltAuthorizationUrl,
+  type ParsedAuthCallback,
+  type RequestTokenAuthCodeOptions,
+} from "./auth-code.js";
+
+export {
+  codeChallenge,
+  generateCodeVerifier,
+  generateState,
+} from "./pkce.js";

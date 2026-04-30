@@ -1,6 +1,9 @@
 export { Holder, HolderError } from "./holder.js";
 export type {
   AcceptOptions,
+  AuthorizeOptions,
+  AuthorizeResult,
+  ClaimOptions,
   CredentialsApi,
   OffersApi,
   RespondOptions,
