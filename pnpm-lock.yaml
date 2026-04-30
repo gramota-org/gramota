@@ -32,6 +32,9 @@ importers:
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose
+      '@gateway/oid4vci':
+        specifier: workspace:*
+        version: link:../oid4vci
       '@gateway/oid4vp':
         specifier: workspace:*
         version: link:../oid4vp
@@ -57,6 +60,9 @@ importers:
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose
+      '@gateway/oid4vci':
+        specifier: workspace:*
+        version: link:../oid4vci
       '@gateway/oid4vp':
         specifier: workspace:*
         version: link:../oid4vp
@@ -67,6 +73,9 @@ importers:
         specifier: workspace:*
         version: link:../sd-jwt
     devDependencies:
+      '@gateway/issuer':
+        specifier: workspace:*
+        version: link:../issuer
       '@gateway/verifier':
         specifier: workspace:*
         version: link:../verifier
@@ -89,6 +98,22 @@ importers:
 
   packages/jose:
     dependencies:
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
+  packages/oid4vci:
+    dependencies:
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+    devDependencies:
+      '@gateway/issuer':
+        specifier: workspace:*
+        version: link:../issuer
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
       jose:
         specifier: ^5.9.6
         version: 5.10.0

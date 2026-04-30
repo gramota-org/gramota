@@ -1,8 +1,14 @@
+import type { JsonWebKey } from "@gateway/jose";
 import {
   buildAuthorizationResponseBody,
   parseAuthorizationRequestUrl,
   type AuthorizationRequest,
 } from "@gateway/oid4vp";
+import {
+  Oid4vciClient,
+  type AcceptOfferOptions,
+  type CredentialOffer,
+} from "@gateway/oid4vci";
 import {
   buildPresentationSubmission,
   selectForDefinition,
@@ -22,6 +28,25 @@ import {
   type ReceiveOptions,
   type StoredCredential,
 } from "./types.js";
+
+/** Stripe-style sub-API for OID4VCI credential offers. `holder.offers.X(...)`. */
+export interface OffersApi {
+  /** Parse a credential offer URL with no network I/O — preview an offer
+   * before deciding to accept it. */
+  parse(url: string): CredentialOffer;
+  /** Accept a credential offer end-to-end: parse → fetch metadata → token →
+   * proof JWT → credential request → validate → store. Returns the
+   * StoredCredential, same shape as `holder.credentials.receive`. */
+  accept(url: string, options: AcceptOptions): Promise<StoredCredential>;
+}
+
+/** Options for `holder.offers.accept()`. Extends OID4VCI's accept options
+ * with trustedIssuers (same semantics as credentials.receive). */
+export interface AcceptOptions extends AcceptOfferOptions {
+  /** Trusted issuer JWKs the received credential's signature must verify
+   * against. The credential is rejected if it does not. */
+  trustedIssuers: readonly JsonWebKey[];
+}
 
 /** Options for `holder.respondTo()`. */
 export interface RespondOptions {
@@ -76,6 +101,9 @@ export class Holder {
   /** Credential CRUD. `holder.credentials.{receive, list, get, remove}(...)`. */
   readonly credentials: CredentialsApi;
 
+  /** OID4VCI offers. `holder.offers.{parse, accept}(...)`. */
+  readonly offers: OffersApi;
+
   constructor(config: HolderConfig) {
     if (config.privateKey === null || typeof config.privateKey !== "object") {
       throw new TypeError("Holder: privateKey is required");
@@ -95,6 +123,42 @@ export class Holder {
       get: (id) => this.store.get(id),
       list: (query) => this.store.list(query),
       remove: (id) => this.store.remove(id),
+    };
+
+    // OID4VCI client — built lazily so tests that don't use it incur no cost.
+    let oid4vciClient: Oid4vciClient | undefined;
+    const ensureClient = (): Oid4vciClient => {
+      if (oid4vciClient === undefined) {
+        oid4vciClient = new Oid4vciClient({
+          holderPublicKey: this.config.publicKey,
+          holderPrivateKey: this.config.privateKey,
+          alg: this.config.alg,
+        });
+      }
+      return oid4vciClient;
+    };
+
+    this.offers = {
+      parse: (url) => ensureClient().parseOffer(url),
+      accept: async (url, options) => {
+        const client = ensureClient();
+        const acceptOpts: AcceptOfferOptions = {};
+        if (options.txCode !== undefined) acceptOpts.txCode = options.txCode;
+        if (options.credentialConfigurationId !== undefined) {
+          acceptOpts.credentialConfigurationId = options.credentialConfigurationId;
+        }
+        if (options.proofIat !== undefined) acceptOpts.proofIat = options.proofIat;
+        if (options.fetcher !== undefined) acceptOpts.fetcher = options.fetcher;
+
+        const result = await client.acceptOffer(url, acceptOpts);
+        // Validate + store using the same path as credentials.receive.
+        return await receiveCredential(
+          result.credential,
+          this.config,
+          this.store,
+          { trustedIssuers: options.trustedIssuers },
+        );
+      },
     };
   }
 
