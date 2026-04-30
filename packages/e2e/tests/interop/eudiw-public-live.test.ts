@@ -20,10 +20,7 @@ import {
   parseAuthorizationRequestSearchParams,
   type AuthorizationRequest,
 } from "@gateway/oid4vp";
-import {
-  selectForDefinition,
-  type PresentationDefinition,
-} from "@gateway/presentation-exchange";
+import { verifyJwsWithX5c } from "@gateway/jose";
 
 const LIVE = process.env["EUDI_LIVE"] === "1";
 const dlive = LIVE ? describe : describe.skip;
@@ -36,32 +33,34 @@ async function initTransaction(): Promise<{
   client_id: string;
   request: string;
 }> {
+  // Per the EU verifier's current OpenAPI spec, the API accepts DCQL queries
+  // (Digital Credentials Query Language, OID4VP 2.0) — `presentation_definition`
+  // has been retired. Body shape mirrors their openapi.json example
+  // `InitVpTokenTransactionByValueCrossDevice`.
   const initBody = {
-    type: "vp_token",
-    presentation_definition: {
-      id: `live-smoke-${Date.now()}`,
-      input_descriptors: [
+    dcql_query: {
+      credentials: [
         {
-          id: "eu.europa.ec.eudi.pid.1",
-          name: "EUDI PID",
+          id: "eu-pid-live",
+          format: "mso_mdoc",
+          meta: { doctype_value: "eu.europa.ec.eudi.pid.1" },
+          claims: [
+            {
+              path: ["eu.europa.ec.eudi.pid.1", "family_name"],
+            },
+          ],
+        },
+      ],
+      credential_sets: [
+        {
+          options: [["eu-pid-live"]],
           purpose: "Live smoke from @gateway SDK",
-          format: { mso_mdoc: { alg: ["ES256"] } },
-          constraints: {
-            fields: [
-              {
-                path: ["$['eu.europa.ec.eudi.pid.1']['family_name']"],
-                intent_to_retain: false,
-              },
-            ],
-          },
         },
       ],
     },
     nonce: `live-${Date.now()}`,
     jar_mode: "by_value",
-    presentation_definition_mode: "by_value",
-    wallet_response_redirect_uri_template:
-      "https://example.com/cb?response_code={RESPONSE_CODE}",
+    profile: "openid4vp",
   };
 
   const response = await fetch(INIT_ENDPOINT, {
@@ -69,7 +68,12 @@ async function initTransaction(): Promise<{
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(initBody),
   });
-  expect(response.ok).toBe(true);
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `init-transaction failed: HTTP ${response.status} ${response.statusText}\nbody: ${body.slice(0, 1000)}`,
+    );
+  }
   return (await response.json()) as {
     transaction_id: string;
     client_id: string;
@@ -94,35 +98,58 @@ function asParams(payload: Record<string, unknown>): Record<string, string> {
 }
 
 dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
-  it("@gateway/oid4vp parses the live JAR payload as a valid AuthorizationRequest", async () => {
+  it("@gateway/jose cryptographically verifies the LIVE JAR signature via x5c", async () => {
     const txn = await initTransaction();
 
-    expect(typeof txn.transaction_id).toBe("string");
-    expect(typeof txn.request).toBe("string");
+    // GAP-CLOSING assertion: our SDK verifies the signature on a real,
+    // freshly-emitted EU JAR using the cert chain in the x5c header.
+    const verified = await verifyJwsWithX5c(txn.request);
 
-    const jarPayload = decodeJarPayload(txn.request);
-    const parsed: AuthorizationRequest = parseAuthorizationRequestSearchParams(
-      asParams(jarPayload),
-    );
+    expect(verified.alg).toBe("ES256");
+    expect(verified.header["typ"]).toBe("oauth-authz-req+jwt");
+    expect(verified.payload["response_type"]).toBe("vp_token");
+
+    // OID4VP 2.0: client_id embeds the scheme (e.g. "x509_hash:<hash>" or
+    // "x509_san_dns:<dns>"). We don't pin a specific scheme here — just
+    // assert it's a non-empty string.
+    expect(typeof verified.payload["client_id"]).toBe("string");
+    expect(
+      (verified.payload["client_id"] as string).length,
+    ).toBeGreaterThan(0);
+  }, 20_000);
+
+  it("@gateway/oid4vp accepts the LIVE JAR payload as an AuthorizationRequest", async () => {
+    const txn = await initTransaction();
+
+    // Verify signature first — never trust a parsed-but-unverified request.
+    const verified = await verifyJwsWithX5c(txn.request);
+
+    // Drive the OID4VP parser against the verified payload. With OID4VP 2.0
+    // there's no `presentation_definition` (DCQL takes its place); the parser
+    // must still accept the request structurally.
+    const parsed: AuthorizationRequest =
+      parseAuthorizationRequestSearchParams(asParams(verified.payload));
 
     expect(parsed.response_type).toBe("vp_token");
-    expect(parsed.client_id).toContain("verifier-backend.eudiw.dev");
+    expect(typeof parsed.client_id).toBe("string");
     expect(typeof parsed.nonce).toBe("string");
-    expect(parsed.presentation_definition).toBeDefined();
-  }, 15_000);
+  }, 20_000);
 
-  it("@gateway/presentation-exchange selectForDefinition handles the live PD", async () => {
+  it("LIVE: documents the DCQL gap — EU now uses dcql_query, not presentation_definition", async () => {
     const txn = await initTransaction();
-    const jarPayload = decodeJarPayload(txn.request);
-    const pd = jarPayload["presentation_definition"] as PresentationDefinition;
+    const verified = await verifyJwsWithX5c(txn.request);
 
-    // No SD-JWT-VC credentials on hand → selector should report unmatched
-    // (the EU PD requests mso_mdoc, which our SD-JWT-VC matcher can't satisfy).
-    const sel = selectForDefinition({
-      definition: pd,
-      credentials: [],
-    });
-    expect(sel.fullySatisfied).toBe(false);
-    expect(sel.unmatched.length).toBeGreaterThan(0);
-  }, 15_000);
+    // The EU verifier has migrated to OID4VP 2.0 / DCQL. Our SDK currently
+    // implements the OID4VP 1.0 presentation_definition profile via
+    // @gateway/presentation-exchange. This test documents the gap and acts
+    // as the canary: when we ship DCQL support, this assertion flips.
+    expect(verified.payload["dcql_query"]).toBeDefined();
+    expect(verified.payload["presentation_definition"]).toBeUndefined();
+
+    const dcql = verified.payload["dcql_query"] as {
+      credentials: { id: string; format: string }[];
+    };
+    expect(Array.isArray(dcql.credentials)).toBe(true);
+    expect(dcql.credentials[0]?.format).toBe("mso_mdoc");
+  }, 20_000);
 });

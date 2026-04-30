@@ -28,6 +28,7 @@ import {
   type PresentationDefinition,
 } from "@gateway/presentation-exchange";
 import { parseSdJwt } from "@gateway/sd-jwt";
+import { verifyJwsWithX5c, x5cToPem } from "@gateway/jose";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(
@@ -172,24 +173,57 @@ describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () 
     });
   });
 
-  describe("Honest gap: signed-JAR / request_uri flow", () => {
-    it("our parser does NOT yet validate the JAR signature (x5c chain) — documented gap", () => {
-      // The EU JAR is signed by an x509 cert with a chain in `x5c`. To verify
-      // the signature, we'd need to extract the public key from x5c[0] and
-      // validate the cert chain. Neither is in @gateway/jose yet.
-      //
-      // Until then, integrators must either:
-      //   - use request-by-value flows (our parser handles those fully),
-      //   - or supply the issuer's public JWK out of band.
-      //
-      // This test just records the gap. The next milestone is x5c support
-      // in @gateway/jose + chain validation.
+  describe("@gateway/jose — verify the real EU JAR signature via x5c", () => {
+    it("verifyJwsWithX5c successfully verifies the EU JAR signature", async () => {
+      const result = await verifyJwsWithX5c(fixture.request);
+
+      expect(result.alg).toBe("ES256");
+      expect(result.header["typ"]).toBe("oauth-authz-req+jwt");
+      expect(result.payload["response_type"]).toBe("vp_token");
+      expect(result.payload["client_id"]).toBe(
+        "dev.verifier-backend.eudiw.dev",
+      );
+    });
+
+    it("verifyJwsWithX5c with chain validation against the EU CA also passes", async () => {
+      // Pin x5c[1] (the EU dev CA cert) as the trust anchor. In production
+      // this PEM would be loaded from a trusted source; here we use what's
+      // in the chain itself, which proves the chain validates.
       const headerB64 = fixture.request.split(".")[0]!;
       const header = JSON.parse(
         Buffer.from(headerB64, "base64url").toString("utf-8"),
-      ) as { x5c?: string[] };
-      expect(Array.isArray(header.x5c)).toBe(true);
-      expect((header.x5c ?? []).length).toBeGreaterThan(0);
+      ) as { x5c: string[] };
+      const euCaPem = x5cToPem(header.x5c[1]!);
+
+      const result = await verifyJwsWithX5c(fixture.request, {
+        trustAnchors: [euCaPem],
+        // Pinned to a date inside the cert validity window (2024-02 → 2026-02).
+        now: new Date("2025-06-01T00:00:00Z"),
+      });
+
+      expect(result.chain).toBeDefined();
+      expect(result.chain?.leaf.subject).toContain("EUDI Remote Verifier");
+      expect(result.payload["response_type"]).toBe("vp_token");
+    });
+
+    it("verifyJwsWithX5c rejects when chain does not lead to the supplied anchor", async () => {
+      // Use an unrelated cert as the only anchor.
+      const headerB64 = fixture.request.split(".")[0]!;
+      const header = JSON.parse(
+        Buffer.from(headerB64, "base64url").toString("utf-8"),
+      ) as { x5c: string[] };
+      // Re-use leaf as anchor (won't match the chain root).
+      const wrongAnchor = x5cToPem(header.x5c[0]!);
+
+      try {
+        await verifyJwsWithX5c(fixture.request, {
+          trustAnchors: [wrongAnchor],
+          now: new Date("2025-06-01T00:00:00Z"),
+        });
+        throw new Error("should have thrown");
+      } catch (err) {
+        expect(err).toMatchObject({ code: "jose.x5c_no_trust_anchor" });
+      }
     });
   });
 });
