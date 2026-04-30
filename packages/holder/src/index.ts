@@ -6,6 +6,7 @@ export type {
   CredentialQuery,
   CredentialStore,
   HolderConfig,
+  HolderErrorCode,
   PresentOptions,
   ReceiveOptions,
   StoredCredential,

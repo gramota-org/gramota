@@ -32,6 +32,7 @@ export function buildAuthorizationRequestUrl(
       url.searchParams.set(key, value);
     } else {
       throw new Oid4vpError(
+        "oid4vp.invalid_value_type",
         `unsupported value type for '${key}': ${typeof value}`,
       );
     }
@@ -48,6 +49,7 @@ export function parseAuthorizationRequestUrl(
     url = new URL(rawUrl);
   } catch (err) {
     throw new Oid4vpError(
+      "oid4vp.invalid_url",
       `not a valid URL: ${err instanceof Error ? err.message : String(err)}`,
     );
   }
@@ -88,6 +90,7 @@ export function parseAuthorizationRequestSearchParams(
         out[key] = JSON.parse(value);
       } catch (err) {
         throw new Oid4vpError(
+          "oid4vp.invalid_json",
           `invalid JSON for parameter '${key}': ${
             err instanceof Error ? err.message : String(err)
           }`,
@@ -107,12 +110,14 @@ function validateRequest(req: Partial<AuthorizationRequest>): void {
     const v = req[field];
     if (typeof v !== "string" || v.length === 0) {
       throw new Oid4vpError(
+        "oid4vp.required_field_missing",
         `Authorization Request is missing required parameter: ${field}`,
       );
     }
   }
   if (req.response_type !== "vp_token") {
     throw new Oid4vpError(
+      "oid4vp.unsupported_response_type",
       `Authorization Request response_type must be 'vp_token', got '${req.response_type}'`,
     );
   }
@@ -121,11 +126,13 @@ function validateRequest(req: Partial<AuthorizationRequest>): void {
     req.presentation_definition_uri !== undefined
   ) {
     throw new Oid4vpError(
+      "oid4vp.mutually_exclusive_fields",
       "presentation_definition and presentation_definition_uri are mutually exclusive (OID4VP §5.4)",
     );
   }
   if (req.response_mode === "direct_post" && req.response_uri === undefined) {
     throw new Oid4vpError(
+      "oid4vp.response_uri_required",
       "response_mode=direct_post requires response_uri (OID4VP §6.2)",
     );
   }

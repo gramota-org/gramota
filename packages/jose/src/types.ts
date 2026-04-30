@@ -49,6 +49,33 @@ export interface VerifiedJws {
   alg: SupportedAlg;
 }
 
+/** Stable machine-readable error codes for `JoseVerificationError`. */
+export type JoseErrorCode =
+  | "jose.invalid_input"
+  | "jose.malformed_jws"
+  | "jose.malformed_header"
+  | "jose.malformed_payload"
+  | "jose.malformed_signature"
+  | "jose.alg_missing"
+  | "jose.alg_none_disallowed"
+  | "jose.alg_not_allowed"
+  | "jose.signature_invalid"
+  | "jose.key_import_failed"
+  | "jose.signing_failed";
+
 export class JoseVerificationError extends Error {
   override readonly name = "JoseVerificationError";
+  readonly code: JoseErrorCode;
+
+  constructor(
+    code: JoseErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }

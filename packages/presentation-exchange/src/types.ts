@@ -70,6 +70,25 @@ export interface DescriptorMap {
   path_nested?: DescriptorMap;
 }
 
+/** Stable codes for `PresentationExchangeError`. */
+export type PresentationExchangeErrorCode =
+  | "pe.jsonpath_invalid"
+  | "pe.unsatisfiable"
+  | "pe.format_unsupported"
+  | "pe.invalid_input";
+
 export class PresentationExchangeError extends Error {
   override readonly name = "PresentationExchangeError";
+  readonly code: PresentationExchangeErrorCode;
+  constructor(
+    code: PresentationExchangeErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }

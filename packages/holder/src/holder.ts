@@ -124,7 +124,7 @@ export class Holder {
     options: RespondOptions = {},
   ): Promise<RespondResult> {
     if (typeof requestUrl !== "string" || requestUrl.length === 0) {
-      throw new HolderError("holder.respond: requestUrl is required");
+      throw new HolderError("holder.invalid_input", "holder.respond: requestUrl is required");
     }
 
     const request = parseAuthorizationRequestUrl(requestUrl);
@@ -135,6 +135,7 @@ export class Holder {
       | undefined;
     if (pd === undefined) {
       throw new HolderError(
+        "holder.pd_required",
         "holder.respond: only inline presentation_definition is supported in v1",
       );
     }
@@ -166,11 +167,13 @@ export class Holder {
     if (!selection.fullySatisfied) {
       const ids = selection.unmatched.map((u) => u.descriptor.id).join(", ");
       throw new HolderError(
+        "holder.pd_unsatisfiable",
         `holder.respond: cannot satisfy presentation_definition — unmatched descriptors: ${ids}`,
       );
     }
     if (selection.matches.length > 1) {
       throw new HolderError(
+        "holder.multi_credential_unsupported",
         "holder.respond: multi-credential responses are not yet supported in v1",
       );
     }

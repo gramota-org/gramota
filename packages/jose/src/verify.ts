@@ -39,7 +39,10 @@ export async function verifyJws(
   options: VerifyJwsOptions = {},
 ): Promise<VerifiedJws> {
   if (typeof jws !== "string" || jws.length === 0) {
-    throw new JoseVerificationError("jws must be a non-empty string");
+    throw new JoseVerificationError(
+      "jose.invalid_input",
+      "jws must be a non-empty string",
+    );
   }
 
   const allowedAlgs = options.algorithms ?? ALL_ALGS;
@@ -51,6 +54,7 @@ export async function verifyJws(
     key = await importJWK(publicKey as Parameters<typeof importJWK>[0], alg);
   } catch (err) {
     throw new JoseVerificationError(
+      "jose.key_import_failed",
       `failed to import public JWK: ${describe(err)}`,
     );
   }
@@ -62,6 +66,7 @@ export async function verifyJws(
     });
   } catch (err) {
     throw new JoseVerificationError(
+      "jose.signature_invalid",
       `signature verification failed: ${describe(err)}`,
     );
   }
@@ -75,7 +80,10 @@ export async function verifyJws(
     }
     payload = parsed as Record<string, unknown>;
   } catch (err) {
-    throw new JoseVerificationError(`invalid payload: ${describe(err)}`);
+    throw new JoseVerificationError(
+      "jose.malformed_payload",
+      `invalid payload: ${describe(err)}`,
+    );
   }
 
   return {
@@ -91,7 +99,10 @@ function enforceHeaderRules(
 ): string {
   const headerB64 = jws.split(".")[0];
   if (headerB64 === undefined || headerB64.length === 0) {
-    throw new JoseVerificationError("malformed JWS: missing header segment");
+    throw new JoseVerificationError(
+      "jose.malformed_jws",
+      "malformed JWS: missing header segment",
+    );
   }
 
   let header: unknown;
@@ -99,23 +110,34 @@ function enforceHeaderRules(
     const json = Buffer.from(headerB64, "base64url").toString("utf-8");
     header = JSON.parse(json);
   } catch {
-    throw new JoseVerificationError("malformed JWS header (not base64url JSON)");
+    throw new JoseVerificationError(
+      "jose.malformed_header",
+      "malformed JWS header (not base64url JSON)",
+    );
   }
   if (header === null || typeof header !== "object" || Array.isArray(header)) {
-    throw new JoseVerificationError("JWS header must be a JSON object");
+    throw new JoseVerificationError(
+      "jose.malformed_header",
+      "JWS header must be a JSON object",
+    );
   }
 
   const alg = (header as Record<string, unknown>)["alg"];
   if (typeof alg !== "string" || alg.length === 0) {
-    throw new JoseVerificationError("JWS header is missing alg");
+    throw new JoseVerificationError(
+      "jose.alg_missing",
+      "JWS header is missing alg",
+    );
   }
   if (alg.toLowerCase() === "none") {
     throw new JoseVerificationError(
+      "jose.alg_none_disallowed",
       "alg=none is never permitted, regardless of allowlist",
     );
   }
   if (!(allowedAlgs as readonly string[]).includes(alg)) {
     throw new JoseVerificationError(
+      "jose.alg_not_allowed",
       `alg ${alg} is not in the allowlist (${allowedAlgs.join(", ")})`,
     );
   }

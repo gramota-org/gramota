@@ -22,13 +22,17 @@ export async function makeSigner(
     alg.length === 0 ||
     alg.toLowerCase() === "none"
   ) {
-    throw new JoseVerificationError("makeSigner: alg is required and cannot be 'none'");
+    throw new JoseVerificationError(
+      "jose.alg_none_disallowed",
+      "makeSigner: alg is required and cannot be 'none'",
+    );
   }
   let key: Awaited<ReturnType<typeof importJWK>>;
   try {
     key = await importJWK(privateKey as Parameters<typeof importJWK>[0], alg);
   } catch (err) {
     throw new JoseVerificationError(
+      "jose.key_import_failed",
       `makeSigner: failed to import private JWK: ${
         err instanceof Error ? err.message : String(err)
       }`,
@@ -39,6 +43,7 @@ export async function makeSigner(
     const parts = signedPayload.split(".");
     if (parts.length !== 2) {
       throw new JoseVerificationError(
+        "jose.invalid_input",
         "makeSigner: signedPayload must be 'header.payload' (two segments)",
       );
     }
@@ -50,6 +55,7 @@ export async function makeSigner(
       );
     } catch {
       throw new JoseVerificationError(
+        "jose.malformed_header",
         "makeSigner: header is not valid base64url JSON",
       );
     }
@@ -66,6 +72,7 @@ export async function makeSigner(
     const sigParts = fullJws.split(".");
     if (sigParts.length !== 3) {
       throw new JoseVerificationError(
+        "jose.malformed_jws",
         "makeSigner: jose returned a malformed compact JWS",
       );
     }

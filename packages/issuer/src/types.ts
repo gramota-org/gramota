@@ -62,6 +62,28 @@ export interface IssueResult {
   expiresAt: number | undefined;
 }
 
+/** Stable codes for `IssuerError`. */
+export type IssuerErrorCode =
+  | "issuer.subject_invalid"
+  | "issuer.holder_key_required"
+  | "issuer.vct_required"
+  | "issuer.expiry_conflict"
+  | "issuer.expiry_invalid"
+  | "issuer.disclosable_missing"
+  | "issuer.reserved_claim_in_subject";
+
 export class IssuerError extends Error {
   override readonly name = "IssuerError";
+  readonly code: IssuerErrorCode;
+  constructor(
+    code: IssuerErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }

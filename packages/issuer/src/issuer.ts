@@ -127,18 +127,20 @@ function validate(options: IssueOptions): void {
     typeof options.subject !== "object" ||
     Array.isArray(options.subject)
   ) {
-    throw new IssuerError("issue: subject must be a non-null object");
+    throw new IssuerError("issuer.subject_invalid", "issue: subject must be a non-null object");
   }
   if (options.holderKey === null || typeof options.holderKey !== "object") {
-    throw new IssuerError("issue: holderKey is required (a JsonWebKey)");
+    throw new IssuerError("issuer.holder_key_required", "issue: holderKey is required (a JsonWebKey)");
   }
   if (typeof options.vct !== "string" || options.vct.length === 0) {
     throw new IssuerError(
+      "issuer.vct_required",
       "issue: vct is required per IETF SD-JWT-VC §3.2.2.1",
     );
   }
   if (options.expiresIn !== undefined && options.expiresAt !== undefined) {
     throw new IssuerError(
+      "issuer.expiry_conflict",
       "issue: expiresIn and expiresAt are mutually exclusive",
     );
   }
@@ -146,6 +148,7 @@ function validate(options: IssueOptions): void {
     for (const name of options.selectivelyDisclosable) {
       if (!Object.prototype.hasOwnProperty.call(options.subject, name)) {
         throw new IssuerError(
+          "issuer.disclosable_missing",
           `issue: selectively disclosable claim '${name}' is not present in subject`,
         );
       }
@@ -155,6 +158,7 @@ function validate(options: IssueOptions): void {
   for (const reserved of ["iss", "iat", "exp", "nbf", "cnf", "vct", "status"]) {
     if (Object.prototype.hasOwnProperty.call(options.subject, reserved)) {
       throw new IssuerError(
+        "issuer.reserved_claim_in_subject",
         `issue: subject must not contain reserved JWT claim '${reserved}' — pass via options instead`,
       );
     }
@@ -168,6 +172,7 @@ function computeExpiry(
   if (options.expiresAt !== undefined) {
     if (options.expiresAt <= issuedAt) {
       throw new IssuerError(
+        "issuer.expiry_invalid",
         `issue: expiresAt (${options.expiresAt}) must be > issuedAt (${issuedAt})`,
       );
     }
@@ -175,7 +180,7 @@ function computeExpiry(
   }
   if (options.expiresIn !== undefined) {
     if (options.expiresIn <= 0) {
-      throw new IssuerError("issue: expiresIn must be > 0 seconds");
+      throw new IssuerError("issuer.expiry_invalid", "issue: expiresIn must be > 0 seconds");
     }
     return issuedAt + options.expiresIn;
   }

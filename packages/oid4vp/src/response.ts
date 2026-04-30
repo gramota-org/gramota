@@ -24,7 +24,10 @@ export function buildAuthorizationResponseBody(
   } else if (typeof response.vp_token === "string") {
     body.set("vp_token", response.vp_token);
   } else {
-    throw new Oid4vpError("vp_token must be a string or an array of strings");
+    throw new Oid4vpError(
+      "oid4vp.invalid_value_type",
+      "vp_token must be a string or an array of strings",
+    );
   }
   body.set(
     "presentation_submission",
@@ -45,6 +48,7 @@ export function parseAuthorizationResponseBody(
     params = new URLSearchParams(rawBody);
   } catch (err) {
     throw new Oid4vpError(
+      "oid4vp.malformed_body",
       `Authorization Response body is not valid URL-encoded form data: ${
         err instanceof Error ? err.message : String(err)
       }`,
@@ -66,11 +70,13 @@ export function parseAuthorizationResponseFromParams(
 
   if (vpRaw === undefined) {
     throw new Oid4vpError(
+      "oid4vp.required_field_missing",
       "Authorization Response is missing required parameter: vp_token",
     );
   }
   if (submissionRaw === undefined) {
     throw new Oid4vpError(
+      "oid4vp.required_field_missing",
       "Authorization Response is missing required parameter: presentation_submission",
     );
   }
@@ -80,6 +86,7 @@ export function parseAuthorizationResponseFromParams(
     submission = JSON.parse(submissionRaw);
   } catch (err) {
     throw new Oid4vpError(
+      "oid4vp.invalid_json",
       `presentation_submission is not valid JSON: ${
         err instanceof Error ? err.message : String(err)
       }`,
@@ -91,6 +98,7 @@ export function parseAuthorizationResponseFromParams(
     Array.isArray(submission)
   ) {
     throw new Oid4vpError(
+      "oid4vp.malformed_submission",
       "presentation_submission must be a JSON object (DIF Presentation Exchange v2)",
     );
   }
@@ -128,6 +136,7 @@ function validateResponse(resp: Partial<AuthorizationResponse>): void {
   for (const field of REQUIRED_FIELDS) {
     if (resp[field] === undefined) {
       throw new Oid4vpError(
+        "oid4vp.required_field_missing",
         `Authorization Response is missing required parameter: ${field}`,
       );
     }
@@ -140,6 +149,7 @@ function validateResponse(resp: Partial<AuthorizationResponse>): void {
     )
   ) {
     throw new Oid4vpError(
+      "oid4vp.invalid_value_type",
       "vp_token must be a string or an array of strings",
     );
   }

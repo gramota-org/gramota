@@ -73,6 +73,33 @@ export interface PresentOptions {
   now?: () => number;
 }
 
+/** Stable codes for `HolderError`. */
+export type HolderErrorCode =
+  | "holder.invalid_input"
+  | "holder.malformed_token"
+  | "holder.no_trusted_issuers"
+  | "holder.issuer_signature_invalid"
+  | "holder.disclosure_forged"
+  | "holder.cnf_missing"
+  | "holder.cnf_mismatch"
+  | "holder.credential_not_found"
+  | "holder.disclosure_unavailable"
+  | "holder.pd_unsatisfiable"
+  | "holder.pd_required"
+  | "holder.multi_credential_unsupported";
+
 export class HolderError extends Error {
   override readonly name = "HolderError";
+  readonly code: HolderErrorCode;
+  constructor(
+    code: HolderErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }

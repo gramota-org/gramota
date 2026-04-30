@@ -26,11 +26,12 @@ export type JsonPathSegment =
 
 export function parseJsonPath(expr: string): readonly JsonPathSegment[] {
   if (typeof expr !== "string" || expr.length === 0) {
-    throw new PresentationExchangeError("JSONPath: empty expression");
+    throw new PresentationExchangeError("pe.jsonpath_invalid", "JSONPath: empty expression");
   }
   if (expr === "$") return [];
   if (!expr.startsWith("$")) {
     throw new PresentationExchangeError(
+      "pe.jsonpath_invalid",
       `JSONPath: expression must start with '$', got: ${expr}`,
     );
   }
@@ -47,6 +48,7 @@ export function parseJsonPath(expr: string): readonly JsonPathSegment[] {
       const name = expr.slice(i, j);
       if (name.length === 0) {
         throw new PresentationExchangeError(
+          "pe.jsonpath_invalid",
           `JSONPath: empty property name at position ${i}`,
         );
       }
@@ -60,12 +62,14 @@ export function parseJsonPath(expr: string): readonly JsonPathSegment[] {
         const end = expr.indexOf(quote, i + 1);
         if (end === -1) {
           throw new PresentationExchangeError(
+            "pe.jsonpath_invalid",
             `JSONPath: unterminated quote at position ${i}`,
           );
         }
         const name = expr.slice(i + 1, end);
         if (expr.charAt(end + 1) !== "]") {
           throw new PresentationExchangeError(
+            "pe.jsonpath_invalid",
             `JSONPath: expected ']' after quoted name at position ${end + 1}`,
           );
         }
@@ -75,6 +79,7 @@ export function parseJsonPath(expr: string): readonly JsonPathSegment[] {
         const end = expr.indexOf("]", i);
         if (end === -1) {
           throw new PresentationExchangeError(
+            "pe.jsonpath_invalid",
             `JSONPath: unterminated '[' at position ${i - 1}`,
           );
         }
@@ -82,6 +87,7 @@ export function parseJsonPath(expr: string): readonly JsonPathSegment[] {
         const idx = Number.parseInt(idxStr, 10);
         if (!Number.isInteger(idx) || idx < 0 || String(idx) !== idxStr) {
           throw new PresentationExchangeError(
+            "pe.jsonpath_invalid",
             `JSONPath: invalid array index '${idxStr}' at position ${i}`,
           );
         }
@@ -90,6 +96,7 @@ export function parseJsonPath(expr: string): readonly JsonPathSegment[] {
       }
     } else {
       throw new PresentationExchangeError(
+        "pe.jsonpath_invalid",
         `JSONPath: unexpected character '${ch}' at position ${i}`,
       );
     }

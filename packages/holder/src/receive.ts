@@ -37,6 +37,7 @@ export async function receiveCredential(
     parsed = parseSdJwt(token);
   } catch (err) {
     throw new HolderError(
+      "holder.malformed_token",
       `cannot receive credential — token is malformed: ${describe(err)}`,
     );
   }
@@ -46,7 +47,7 @@ export async function receiveCredential(
     !Array.isArray(options.trustedIssuers) ||
     options.trustedIssuers.length === 0
   ) {
-    throw new HolderError("at least one trustedIssuer is required");
+    throw new HolderError("holder.no_trusted_issuers", "at least one trustedIssuer is required");
   }
   let verifiedAgainstAny = false;
   let lastError: unknown;
@@ -65,6 +66,7 @@ export async function receiveCredential(
   if (!verifiedAgainstAny) {
     const detail = lastError instanceof JoseVerificationError ? lastError.message : "no match";
     throw new HolderError(
+      "holder.issuer_signature_invalid",
       `issuer signature did not verify against any trusted key: ${detail}`,
     );
   }
@@ -76,6 +78,7 @@ export async function receiveCredential(
       .map((d) => d.name ?? "<array element>")
       .join(", ");
     throw new HolderError(
+      "holder.disclosure_forged",
       `credential contains forged disclosures: ${names}`,
     );
   }
@@ -84,12 +87,14 @@ export async function receiveCredential(
   const cnf = parsed.payload["cnf"];
   if (cnf === null || typeof cnf !== "object" || Array.isArray(cnf)) {
     throw new HolderError(
+      "holder.cnf_missing",
       "credential has no cnf claim — cannot bind to this holder",
     );
   }
   const cnfJwk = (cnf as Record<string, unknown>)["jwk"];
   if (!publicJwksEqual(cnfJwk, config.publicKey)) {
     throw new HolderError(
+      "holder.cnf_mismatch",
       "credential cnf.jwk does not match this holder's public key — credential was issued to a different holder",
     );
   }

@@ -59,6 +59,7 @@ export class JwksUrlTrustResolver implements TrustResolver {
   ): Promise<readonly JsonWebKey[]> {
     if (context.iss === undefined) {
       throw new TrustResolutionError(
+        "trust.iss_required",
         "JwksUrlTrustResolver requires iss but JWT has no iss claim",
       );
     }
@@ -96,11 +97,13 @@ export class JwksUrlTrustResolver implements TrustResolver {
       response = await this.fetcher(url);
     } catch (err) {
       throw new TrustResolutionError(
+        "trust.fetch_failed",
         `failed to fetch JWKS from ${url}: ${describe(err)}`,
       );
     }
     if (!response.ok) {
       throw new TrustResolutionError(
+        "trust.http_error",
         `JWKS fetch returned HTTP ${response.status} from ${url}`,
       );
     }
@@ -110,6 +113,7 @@ export class JwksUrlTrustResolver implements TrustResolver {
       body = await response.json();
     } catch (err) {
       throw new TrustResolutionError(
+        "trust.malformed_jwks",
         `JWKS at ${url} is not valid JSON: ${describe(err)}`,
       );
     }
@@ -128,18 +132,21 @@ export class JwksUrlTrustResolver implements TrustResolver {
 function parseJwksResponse(body: unknown, url: string): readonly JsonWebKey[] {
   if (body === null || typeof body !== "object" || Array.isArray(body)) {
     throw new TrustResolutionError(
+      "trust.malformed_jwks",
       `JWKS at ${url} is not a JSON object`,
     );
   }
   const keys = (body as Record<string, unknown>)["keys"];
   if (!Array.isArray(keys)) {
     throw new TrustResolutionError(
+      "trust.malformed_jwks",
       `JWKS at ${url} is missing a "keys" array (RFC 7517 §5)`,
     );
   }
   for (const k of keys) {
     if (k === null || typeof k !== "object" || Array.isArray(k)) {
       throw new TrustResolutionError(
+        "trust.malformed_jwks",
         `JWKS at ${url} contains a non-object entry`,
       );
     }

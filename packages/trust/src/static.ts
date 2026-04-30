@@ -65,12 +65,14 @@ export class StaticTrustResolver implements TrustResolver {
     } else {
       if (context.iss === undefined) {
         throw new TrustResolutionError(
+          "trust.iss_required",
           "issuer-keyed StaticTrustResolver requires iss to resolve, but JWT has no iss claim",
         );
       }
       const forIss = this.byIssuer.get(context.iss);
       if (forIss === undefined) {
         throw new TrustResolutionError(
+          "trust.issuer_not_configured",
           `issuer ${context.iss} is not in the static trust list`,
         );
       }

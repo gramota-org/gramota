@@ -25,22 +25,22 @@ export async function buildPresentation(
   options: PresentOptions,
 ): Promise<string> {
   if (typeof options.credentialId !== "string" || options.credentialId.length === 0) {
-    throw new HolderError("credentialId is required");
+    throw new HolderError("holder.invalid_input", "credentialId is required");
   }
   if (typeof options.audience !== "string" || options.audience.length === 0) {
-    throw new HolderError("audience is required");
+    throw new HolderError("holder.invalid_input", "audience is required");
   }
   if (typeof options.nonce !== "string" || options.nonce.length === 0) {
-    throw new HolderError("nonce is required");
+    throw new HolderError("holder.invalid_input", "nonce is required");
   }
   if (!Array.isArray(options.disclose)) {
-    throw new HolderError("disclose must be an array of claim names");
+    throw new HolderError("holder.invalid_input", "disclose must be an array of claim names");
   }
 
   // 1. Look up
   const stored = await store.get(options.credentialId);
   if (stored === undefined) {
-    throw new HolderError(`credential not found: ${options.credentialId}`);
+    throw new HolderError("holder.credential_not_found", `credential not found: ${options.credentialId}`);
   }
 
   // 2. Validate every requested disclosure is available
@@ -54,6 +54,7 @@ export async function buildPresentation(
     const disc = availableByName.get(name);
     if (disc === undefined) {
       throw new HolderError(
+        "holder.disclosure_unavailable",
         `requested disclosure '${name}' is not available in credential ${stored.id}`,
       );
     }

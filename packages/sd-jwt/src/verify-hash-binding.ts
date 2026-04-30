@@ -7,8 +7,24 @@ import type {
 
 const DEFAULT_HASH_ALG = "sha-256";
 
+/** Stable codes for `SdJwtVerificationError`. */
+export type SdJwtVerificationErrorCode =
+  | "sd_jwt.verify.unsupported_hash_alg";
+
 export class SdJwtVerificationError extends Error {
   override readonly name = "SdJwtVerificationError";
+  readonly code: SdJwtVerificationErrorCode;
+  constructor(
+    code: SdJwtVerificationErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }
 
 /**
@@ -134,6 +150,9 @@ function toNodeHashAlgorithm(alg: string): string {
     case "sha-512":
       return "sha512";
     default:
-      throw new SdJwtVerificationError(`unsupported _sd_alg: ${alg}`);
+      throw new SdJwtVerificationError(
+        "sd_jwt.verify.unsupported_hash_alg",
+        `unsupported _sd_alg: ${alg}`,
+      );
   }
 }

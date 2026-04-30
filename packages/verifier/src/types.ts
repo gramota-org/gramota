@@ -108,11 +108,15 @@ export interface FailureResult {
 
 export class VerificationError extends Error {
   override readonly name = "VerificationError";
+  /** Equal to `result.failedCheck` — stable identifier for log filters,
+   * alerts, and dashboards. Same shape as the codes used by other packages. */
+  readonly code: SecurityCheckName;
   constructor(
     message: string,
     /** The full failure record — stable for logging. */
     readonly result: FailureResult,
   ) {
     super(message);
+    this.code = result.failedCheck;
   }
 }

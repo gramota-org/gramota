@@ -112,6 +112,7 @@ export function buildPresentationSubmission<TCredential>(
 ): PresentationSubmission {
   if (!selection.fullySatisfied) {
     throw new PresentationExchangeError(
+      "pe.unsatisfiable",
       `cannot build submission — ${selection.unmatched.length} descriptor(s) unmatched`,
     );
   }

@@ -3,6 +3,7 @@ export { signJws } from "./sign.js";
 export { makeSigner } from "./make-signer.js";
 export type { SignJwsOptions } from "./sign.js";
 export type {
+  JoseErrorCode,
   JsonWebKey,
   SupportedAlg,
   VerifyJwsOptions,

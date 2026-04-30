@@ -13,5 +13,6 @@ export {
   type AuthorizationRequest,
   type AuthorizationResponse,
   type ClientIdScheme,
+  type Oid4vpErrorCode,
   type ResponseMode,
 } from "./types.js";

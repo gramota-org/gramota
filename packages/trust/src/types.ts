@@ -20,6 +20,28 @@ export interface TrustResolver {
   resolveIssuerKeys(context: TrustContext): Promise<readonly JsonWebKey[]>;
 }
 
+/** Stable codes for `TrustResolutionError`. */
+export type TrustErrorCode =
+  | "trust.iss_required"
+  | "trust.issuer_not_configured"
+  | "trust.fetch_failed"
+  | "trust.http_error"
+  | "trust.malformed_jwks"
+  | "trust.invalid_input";
+
 export class TrustResolutionError extends Error {
   override readonly name = "TrustResolutionError";
+  readonly code: TrustErrorCode;
+
+  constructor(
+    code: TrustErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }

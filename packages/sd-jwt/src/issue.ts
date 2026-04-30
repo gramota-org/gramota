@@ -31,8 +31,28 @@ export interface IssuanceResult {
   disclosures: SdJwtDisclosure[];
 }
 
+/** Stable codes for `SdJwtIssuanceError`. */
+export type SdJwtIssuanceErrorCode =
+  | "sd_jwt.issue.signer_required"
+  | "sd_jwt.issue.alg_required"
+  | "sd_jwt.issue.signer_returned_empty"
+  | "sd_jwt.issue.unsupported_hash_alg"
+  | "sd_jwt.issue.salt_generator_exhausted";
+
 export class SdJwtIssuanceError extends Error {
   override readonly name = "SdJwtIssuanceError";
+  readonly code: SdJwtIssuanceErrorCode;
+  constructor(
+    code: SdJwtIssuanceErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }
 
 /** Constant placeholder for tests where the signature is not verified. */
@@ -62,10 +82,10 @@ export async function issueSdJwt(
   const salt = opts.saltGenerator ?? defaultSaltGenerator;
 
   if (typeof opts.signer !== "function") {
-    throw new SdJwtIssuanceError("signer is required");
+    throw new SdJwtIssuanceError("sd_jwt.issue.signer_required", "signer is required");
   }
   if (typeof opts.alg !== "string" || opts.alg.length === 0) {
-    throw new SdJwtIssuanceError("alg is required");
+    throw new SdJwtIssuanceError("sd_jwt.issue.alg_required", "alg is required");
   }
 
   // Build disclosures + digests.
@@ -103,7 +123,7 @@ export async function issueSdJwt(
   const signedPayload = `${headerB64}.${payloadB64}`;
   const signature = await opts.signer(signedPayload);
   if (typeof signature !== "string" || signature.length === 0) {
-    throw new SdJwtIssuanceError("signer returned an empty signature");
+    throw new SdJwtIssuanceError("sd_jwt.issue.signer_returned_empty", "signer returned an empty signature");
   }
 
   // Concatenate JWT + disclosures + trailing tilde.
@@ -126,7 +146,7 @@ function toNodeHashAlg(alg: HashAlg): string {
       return "sha512";
     default: {
       const exhaustive: never = alg;
-      throw new SdJwtIssuanceError(`unsupported hash alg: ${exhaustive}`);
+      throw new SdJwtIssuanceError("sd_jwt.issue.unsupported_hash_alg", `unsupported hash alg: ${exhaustive}`);
     }
   }
 }
@@ -142,7 +162,7 @@ export function deterministicSalts(salts: readonly string[]): () => string {
   return () => {
     const s = salts[i++];
     if (s === undefined) {
-      throw new SdJwtIssuanceError("deterministic salt generator exhausted");
+      throw new SdJwtIssuanceError("sd_jwt.issue.salt_generator_exhausted", "deterministic salt generator exhausted");
     }
     return s;
   };

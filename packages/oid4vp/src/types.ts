@@ -71,6 +71,31 @@ export interface AuthorizationResponse {
   iss?: string;
 }
 
+/** Stable codes for `Oid4vpError`. */
+export type Oid4vpErrorCode =
+  | "oid4vp.invalid_url"
+  | "oid4vp.required_field_missing"
+  | "oid4vp.unsupported_response_type"
+  | "oid4vp.mutually_exclusive_fields"
+  | "oid4vp.response_uri_required"
+  | "oid4vp.invalid_json"
+  | "oid4vp.invalid_value_type"
+  | "oid4vp.malformed_body"
+  | "oid4vp.malformed_submission";
+
 export class Oid4vpError extends Error {
   override readonly name = "Oid4vpError";
+  readonly code: Oid4vpErrorCode;
+
+  constructor(
+    code: Oid4vpErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message);
+    this.code = code;
+    if (options?.cause !== undefined) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
+  }
 }

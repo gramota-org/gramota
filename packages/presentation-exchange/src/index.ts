@@ -6,6 +6,7 @@ export {
   type FormatMap,
   type InputDescriptor,
   type PresentationDefinition,
+  type PresentationExchangeErrorCode,
   type PresentationSubmission,
 } from "./types.js";
 

@@ -35,7 +35,10 @@ export async function signJws(
     typeof payload !== "object" ||
     Array.isArray(payload)
   ) {
-    throw new JoseVerificationError("payload must be a JSON object");
+    throw new JoseVerificationError(
+      "jose.invalid_input",
+      "payload must be a JSON object",
+    );
   }
   if (
     typeof options.alg !== "string" ||
@@ -43,6 +46,7 @@ export async function signJws(
     options.alg.toLowerCase() === "none"
   ) {
     throw new JoseVerificationError(
+      "jose.alg_none_disallowed",
       "alg is required and cannot be 'none'",
     );
   }
@@ -62,6 +66,7 @@ export async function signJws(
     );
   } catch (err) {
     throw new JoseVerificationError(
+      "jose.key_import_failed",
       `failed to import private JWK: ${describe(err)}`,
     );
   }
@@ -72,7 +77,10 @@ export async function signJws(
       .setProtectedHeader(header as Parameters<CompactSign["setProtectedHeader"]>[0])
       .sign(key);
   } catch (err) {
-    throw new JoseVerificationError(`signing failed: ${describe(err)}`);
+    throw new JoseVerificationError(
+      "jose.signing_failed",
+      `signing failed: ${describe(err)}`,
+    );
   }
 }
 
