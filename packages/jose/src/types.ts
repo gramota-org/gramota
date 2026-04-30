@@ -61,7 +61,12 @@ export type JoseErrorCode =
   | "jose.alg_not_allowed"
   | "jose.signature_invalid"
   | "jose.key_import_failed"
-  | "jose.signing_failed";
+  | "jose.signing_failed"
+  | "jose.x5c_missing"
+  | "jose.x5c_empty"
+  | "jose.x5c_parse_failed"
+  | "jose.x5c_chain_invalid"
+  | "jose.x5c_no_trust_anchor";
 
 export class JoseVerificationError extends Error {
   override readonly name = "JoseVerificationError";
