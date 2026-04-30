@@ -65,6 +65,8 @@ These principles fall out of the founder's reality (solo engineer, Sofia-based, 
 6. **Marketplaces and content, not outbound.** Distribution channels are GitHub, npm, Hacker News, ProductHunt, dev.to, Indie Hackers, the EUDI GitHub discussions, X, LinkedIn, EU LSP communities. We do not cold-email. We never will.
 7. **Use Claude Code as a force multiplier.** Solo throughput approaches a 4–6 person team. Use it on docs, examples, tests, plugin variants, integration sample apps — the polish surfaces that distinguish us from competitors with more headcount but less time per pixel.
 8. **The forks are fixtures, not foundation.** `eudi-srv-verifier-endpoint`, `eudi-web-verifier`, `eudi-srv-pid-issuer` stay on disk as reference implementations and CI test fixtures. They are not our codebase. They are the impartial truth our library is tested against.
+9. **Spec-first TDD.** For every new package or feature, the order is: pull canonical spec test vectors → write conformance tests against them (red) → write internal unit tests → implement → green. We never write the implementation before we know which IETF / ETSI / EU vectors it must satisfy. Conformance against the spec is the contract; our internal API is downstream of it.
+10. **No Docker for SDK tests.** The protocol is testable without running services. Layers we accept: static fixtures, encoder ↔ decoder roundtrip, deterministic byte-equality with the EU reference, optional native JVM integration when `JAVA_HOME` is present, optional public-instance smoke tests. Docker-compose is not in the test path.
 
 ---
 
