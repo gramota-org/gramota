@@ -6,6 +6,7 @@ const REQUIRED_FIELDS = ["response_type", "client_id", "nonce"] as const;
 /** Object-valued parameters that must be JSON-encoded in URL form. */
 const JSON_FIELDS = new Set<string>([
   "presentation_definition",
+  "dcql_query",
   "client_metadata",
 ]);
 
@@ -78,6 +79,7 @@ export function parseAuthorizationRequestSearchParams(
     "state",
     "presentation_definition",
     "presentation_definition_uri",
+    "dcql_query",
     "client_metadata",
     "scope",
   ];
@@ -128,6 +130,15 @@ function validateRequest(req: Partial<AuthorizationRequest>): void {
     throw new Oid4vpError(
       "oid4vp.mutually_exclusive_fields",
       "presentation_definition and presentation_definition_uri are mutually exclusive (OID4VP §5.4)",
+    );
+  }
+  if (
+    req.presentation_definition !== undefined &&
+    req.dcql_query !== undefined
+  ) {
+    throw new Oid4vpError(
+      "oid4vp.mutually_exclusive_fields",
+      "presentation_definition and dcql_query are mutually exclusive — pick one query language",
     );
   }
   if (req.response_mode === "direct_post" && req.response_uri === undefined) {

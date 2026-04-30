@@ -21,6 +21,7 @@ import {
   type AuthorizationRequest,
 } from "@gateway/oid4vp";
 import { verifyJwsWithX5c } from "@gateway/jose";
+import { selectForDcql, type DcqlQuery } from "@gateway/dcql";
 
 const LIVE = process.env["EUDI_LIVE"] === "1";
 const dlive = LIVE ? describe : describe.skip;
@@ -135,21 +136,36 @@ dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
     expect(typeof parsed.nonce).toBe("string");
   }, 20_000);
 
-  it("LIVE: documents the DCQL gap — EU now uses dcql_query, not presentation_definition", async () => {
+  it("@gateway/dcql parses the LIVE DCQL query (canary FLIPPED — DCQL now supported)", async () => {
     const txn = await initTransaction();
     const verified = await verifyJwsWithX5c(txn.request);
 
-    // The EU verifier has migrated to OID4VP 2.0 / DCQL. Our SDK currently
-    // implements the OID4VP 1.0 presentation_definition profile via
-    // @gateway/presentation-exchange. This test documents the gap and acts
-    // as the canary: when we ship DCQL support, this assertion flips.
+    // OID4VP 2.0: the EU verifier emits dcql_query, not presentation_definition.
     expect(verified.payload["dcql_query"]).toBeDefined();
     expect(verified.payload["presentation_definition"]).toBeUndefined();
 
-    const dcql = verified.payload["dcql_query"] as {
-      credentials: { id: string; format: string }[];
-    };
-    expect(Array.isArray(dcql.credentials)).toBe(true);
-    expect(dcql.credentials[0]?.format).toBe("mso_mdoc");
+    const dcql = verified.payload["dcql_query"] as DcqlQuery;
+
+    // Drive @gateway/dcql against the LIVE query with no credentials.
+    // The EU asks for mso_mdoc (which our SD-JWT-VC matcher correctly
+    // declines), so the result must be unsatisfied with the descriptor
+    // flagged as "no matcher registered for format mso_mdoc".
+    const sel = selectForDcql({
+      query: dcql,
+      credentials: [],
+    });
+
+    expect(sel.fullySatisfied).toBe(false);
+    expect(sel.unmatched.length).toBeGreaterThan(0);
+
+    // Concrete EU canary: the format is mso_mdoc and the doctype is the PID.
+    expect(sel.unmatched[0]?.query.format).toBe("mso_mdoc");
+    const meta = sel.unmatched[0]?.query.meta as
+      | { doctype_value?: string }
+      | undefined;
+    expect(meta?.doctype_value).toBe("eu.europa.ec.eudi.pid.1");
+
+    // Reason chain: no matcher → because we don't have an mDoc matcher yet.
+    expect(sel.unmatched[0]?.reason).toMatch(/no matcher.*mso_mdoc/);
   }, 20_000);
 });

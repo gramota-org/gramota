@@ -75,7 +75,58 @@ export type PresentationExchangeErrorCode =
   | "pe.jsonpath_invalid"
   | "pe.unsatisfiable"
   | "pe.format_unsupported"
-  | "pe.invalid_input";
+  | "pe.invalid_input"
+  | "dcql.invalid_query"
+  | "dcql.invalid_path";
+
+// ---------------------------------------------------------------------------
+// DCQL — Digital Credentials Query Language (OID4VP 2.0)
+// ---------------------------------------------------------------------------
+
+/** A DCQL query — what a verifier asks the wallet for under OID4VP 2.0.
+ * Spec: OID4VP 2.0 §6 (Digital Credentials Query Language). */
+export interface DcqlQuery {
+  /** Credential queries the wallet must satisfy. */
+  credentials: readonly DcqlCredentialQuery[];
+  /** Optional sets describing which combinations of credentials are
+   * acceptable (think of it as OR/AND logic across credentials). */
+  credential_sets?: readonly DcqlCredentialSet[];
+}
+
+export interface DcqlCredentialQuery {
+  id: string;
+  /** Credential format: "vc+sd-jwt", "dc+sd-jwt", "mso_mdoc", "ldp_vc", … */
+  format: string;
+  /** Format-specific filters. For SD-JWT-VC: `{ vct_values: string[] }`.
+   * For mDoc: `{ doctype_value: string }`. */
+  meta?: Readonly<Record<string, unknown>>;
+  /** Claims the wallet must reveal. */
+  claims?: readonly DcqlClaimQuery[];
+  /** Named groups of claims, when the verifier accepts alternate sets. */
+  claim_sets?: readonly (readonly string[])[];
+}
+
+export interface DcqlClaimQuery {
+  /** Optional identifier for use in `claim_sets`. */
+  id?: string;
+  /** Path segments to the claim. Strings = property keys; numbers = array
+   * indices; null = "any element of an array". E.g.
+   *   ["family_name"]                 → top-level family_name
+   *   ["address", "country"]          → nested address.country
+   *   ["eu.europa.ec.eudi.pid.1", "family_name"]  → mDoc namespaced */
+  path: readonly (string | number | null)[];
+  /** Optional value constraint — claim must equal one of these. */
+  values?: readonly unknown[];
+}
+
+export interface DcqlCredentialSet {
+  /** Each option is a list of credential ids. The wallet picks one option
+   * whose credentials it can all supply. */
+  options: readonly (readonly string[])[];
+  /** When `false`, the verifier accepts the request without this set. */
+  required?: boolean;
+  purpose?: string;
+}
 
 export class PresentationExchangeError extends Error {
   override readonly name = "PresentationExchangeError";

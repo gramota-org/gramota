@@ -48,10 +48,14 @@ export interface AuthorizationRequest {
   nonce: string;
   /** Opaque verifier-controlled correlation token, echoed back unchanged. */
   state?: string;
-  /** Inline DIF Presentation Definition JSON — what the verifier wants. */
+  /** Inline DIF Presentation Definition JSON — what the verifier wants
+   * (OID4VP 1.0 query shape). */
   presentation_definition?: Readonly<Record<string, unknown>>;
   /** Or a URL the wallet can fetch the PD from. Mutually exclusive with above. */
   presentation_definition_uri?: string;
+  /** DCQL query (OID4VP 2.0 — Digital Credentials Query Language).
+   * Mutually exclusive with `presentation_definition`. */
+  dcql_query?: Readonly<Record<string, unknown>>;
   /** Wallet metadata transparency parameter. */
   client_metadata?: Readonly<Record<string, unknown>>;
   /** Subset of the wallet's supported response formats / curves the verifier
