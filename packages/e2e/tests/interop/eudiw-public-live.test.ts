@@ -16,12 +16,15 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { generateKeyPair, exportJWK } from "jose";
+import type { JsonWebKey } from "@gateway/jose";
 import {
   parseAuthorizationRequestSearchParams,
   type AuthorizationRequest,
 } from "@gateway/oid4vp";
 import { verifyJwsWithX5c } from "@gateway/jose";
 import { selectForDcql, type DcqlQuery } from "@gateway/dcql";
+import { issueSdJwt, parseSdJwt, stubSignature } from "@gateway/sd-jwt";
 
 const LIVE = process.env["EUDI_LIVE"] === "1";
 const dlive = LIVE ? describe : describe.skip;
@@ -34,22 +37,25 @@ async function initTransaction(): Promise<{
   client_id: string;
   request: string;
 }> {
-  // Per the EU verifier's current OpenAPI spec, the API accepts DCQL queries
-  // (Digital Credentials Query Language, OID4VP 2.0) — `presentation_definition`
-  // has been retired. Body shape mirrors their openapi.json example
-  // `InitVpTokenTransactionByValueCrossDevice`.
+  // Ask the EU verifier for an SD-JWT-VC PID instead of mso_mdoc — both
+  // formats are supported by their dev verifier, and SD-JWT-VC is what
+  // our SDK natively handles. This unlocks a fully-green roundtrip when
+  // we bring our own structurally-correct credential to the test.
+  //
+  // Per IETF SD-JWT-VC §3.2.2.1 (EU profile): vct = "urn:eudi:pid:1"
+  // for the EU PID — referenced from the EU verifier's own
+  // application.properties (vcts[0].url).
   const initBody = {
     dcql_query: {
       credentials: [
         {
           id: "eu-pid-live",
-          format: "mso_mdoc",
-          meta: { doctype_value: "eu.europa.ec.eudi.pid.1" },
-          claims: [
-            {
-              path: ["eu.europa.ec.eudi.pid.1", "family_name"],
-            },
-          ],
+          // OID4VP 2.0 / IETF SD-JWT-VC: the newer format identifier is
+          // "dc+sd-jwt" (older drafts used "vc+sd-jwt"). The EU verifier
+          // accepts the newer one.
+          format: "dc+sd-jwt",
+          meta: { vct_values: ["urn:eudi:pid:1"] },
+          claims: [{ path: ["family_name"] }],
         },
       ],
       credential_sets: [
@@ -136,7 +142,7 @@ dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
     expect(typeof parsed.nonce).toBe("string");
   }, 20_000);
 
-  it("@gateway/dcql parses the LIVE DCQL query (canary FLIPPED — DCQL now supported)", async () => {
+  it("@gateway/dcql parses the LIVE DCQL query (we asked for SD-JWT-VC)", async () => {
     const txn = await initTransaction();
     const verified = await verifyJwsWithX5c(txn.request);
 
@@ -146,26 +152,68 @@ dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
 
     const dcql = verified.payload["dcql_query"] as DcqlQuery;
 
-    // Drive @gateway/dcql against the LIVE query with no credentials.
-    // The EU asks for mso_mdoc (which our SD-JWT-VC matcher correctly
-    // declines), so the result must be unsatisfied with the descriptor
-    // flagged as "no matcher registered for format mso_mdoc".
+    // The EU echoes the format we asked for in the init-transaction body.
+    expect(dcql.credentials[0]?.format).toBe("dc+sd-jwt");
+    const meta = dcql.credentials[0]?.meta as
+      | { vct_values?: readonly string[] }
+      | undefined;
+    expect(meta?.vct_values).toContain("urn:eudi:pid:1");
+
+    // selectForDcql against an EMPTY wallet → unmatched, but with the
+    // semantically-correct reason ("no credential satisfies"), not "no matcher".
+    // That's the difference between "we don't speak this language" and
+    // "we speak it; just don't have what was asked for."
     const sel = selectForDcql({
       query: dcql,
       credentials: [],
     });
-
     expect(sel.fullySatisfied).toBe(false);
-    expect(sel.unmatched.length).toBeGreaterThan(0);
+    expect(sel.unmatched[0]?.reason).toMatch(/no credential satisfies/);
+  }, 20_000);
 
-    // Concrete EU canary: the format is mso_mdoc and the doctype is the PID.
-    expect(sel.unmatched[0]?.query.format).toBe("mso_mdoc");
-    const meta = sel.unmatched[0]?.query.meta as
-      | { doctype_value?: string }
-      | undefined;
-    expect(meta?.doctype_value).toBe("eu.europa.ec.eudi.pid.1");
+  it("@gateway/dcql FULLY MATCHES the live EU DCQL query when given a structurally-correct PID", async () => {
+    // The killer test: bring our own SD-JWT-VC PID (synthetic — it won't
+    // verify against an EU trust anchor, but the matcher only checks
+    // structure) and prove our DCQL matcher correctly identifies it as
+    // satisfying the LIVE EU query.
+    const txn = await initTransaction();
+    const verified = await verifyJwsWithX5c(txn.request);
+    const dcql = verified.payload["dcql_query"] as DcqlQuery;
 
-    // Reason chain: no matcher → because we don't have an mDoc matcher yet.
-    expect(sel.unmatched[0]?.reason).toMatch(/no matcher.*mso_mdoc/);
+    // Synthesize a holder key + a PID-shaped SD-JWT-VC.
+    const { publicKey, privateKey } = await generateKeyPair("ES256", {
+      extractable: true,
+    });
+    const holderPub = (await exportJWK(publicKey)) as JsonWebKey;
+    void privateKey;
+
+    const { token } = await issueSdJwt({
+      payload: {
+        iss: "https://test-issuer.example.com",
+        iat: Math.floor(Date.now() / 1000),
+        vct: "urn:eudi:pid:1", // matches what the EU asked for
+        cnf: { jwk: holderPub },
+      },
+      sdClaims: {
+        family_name: "TestUser",
+        given_name: "Live",
+        birthdate: "1990-01-01",
+      },
+      alg: "ES256",
+      signer: stubSignature, // matcher doesn't verify signature
+    });
+
+    const credentialView = { parsed: parseSdJwt(token) };
+    const sel = selectForDcql({
+      query: dcql,
+      credentials: [credentialView],
+    });
+
+    // The matcher correctly identifies our credential as satisfying the
+    // EU's live query.
+    expect(sel.fullySatisfied).toBe(true);
+    expect(sel.matches).toHaveLength(1);
+    expect(sel.matches[0]?.query.id).toBe("eu-pid-live");
+    expect(sel.matches[0]?.disclose).toEqual(["family_name"]);
   }, 20_000);
 });
