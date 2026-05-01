@@ -7,3 +7,7 @@ export type {
   Fetcher,
   JwksUrlResolverOptions,
 } from "./jwks-url.js";
+export { SdJwtVcIssuerTrustResolver } from "./sd-jwt-vc-issuer.js";
+export type {
+  SdJwtVcIssuerResolverOptions,
+} from "./sd-jwt-vc-issuer.js";

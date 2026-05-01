@@ -92,7 +92,14 @@ export async function runSelfLoop(): Promise<void> {
 
   // === Holder receives ===
   step(3, "Holder receives, validates, and persists the credential");
-  const store = new FileCredentialStore();
+  // Use a per-run temp file so successive demo runs don't pile up
+  // credentials signed by old (different) issuer keypairs — that
+  // confuses the matcher in step 5 and breaks subsequent runs.
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const store = new FileCredentialStore(
+    join(tmpdir(), `eudi-gateway-self-loop-${process.pid}.json`),
+  );
   const holder = new Holder({
     privateKey: holderKey.priv,
     publicKey: holderKey.pub,

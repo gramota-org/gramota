@@ -35,8 +35,9 @@ import {
   Oid4vciClient,
   fetchIssuerMetadata,
 } from "@gateway/oid4vci";
+import { SdJwtVcIssuerTrustResolver } from "@gateway/trust";
 import { FileCredentialStore } from "../file-store.js";
-import { divider, fail, info, step, success, warn } from "../ui.js";
+import { divider, fail, info, step, success } from "../ui.js";
 
 const ISSUER_BACKEND = "https://dev.issuer-backend.eudiw.dev";
 // Documented in eudi-srv-pid-issuer realm export (line 1009-1024 of
@@ -211,26 +212,32 @@ export async function runEuPid(): Promise<void> {
   }
   info(`credential bytes: ${claimed.credential.length}`);
 
-  // Trust note: in a real wallet you'd validate against the EU TIR.
-  // For the demo we extract the issuer's announced public key from
-  // the JWS header (kid lookup) — but that's downstream work; for
-  // now we accept the issuer signature unchecked and just store.
-  warn(
-    "demo: persisting credential WITHOUT issuer-signature verification " +
-      "(would need EU Trusted Issuers Registry resolver — out of scope here)",
-  );
+  // Step 7: validate + persist with FULL trust resolution against EU's
+  // SD-JWT-VC issuer-discovery endpoint (.well-known/jwt-vc-issuer per
+  // draft-ietf-oauth-sd-jwt-vc). The resolver fetches the issuer's
+  // signing keys, the holder verifies the issuer JWS against them.
+  step(7, "Resolve EU's published signing keys + validate the credential");
+  const trustResolver = new SdJwtVcIssuerTrustResolver();
+  const resolvedKeys = await trustResolver.resolveIssuerKeys({
+    iss: ISSUER_BACKEND,
+    kid: undefined,
+    header: {},
+  });
+  info(`fetched ${resolvedKeys.length} trusted key(s) from EU's jwt-vc-issuer endpoint`);
 
-  // Use a permissive trustedIssuers — the holder still validates
-  // structure, hash binding, and cnf.jwk match. Issuer-sig validation
-  // is the gap.
-  // TODO: when we add an EU TIR resolver, re-enable issuer-sig check.
-  const stored = await receivePermissive(holder, claimed.credential);
+  const stored = await holder.credentials.receive(claimed.credential, {
+    trustedIssuers: resolvedKeys,
+  });
+
   divider("");
-  success("EU PID stored locally");
+  success("EU PID received, cryptographically validated, and stored");
   info(`stored.id:    ${stored.id}`);
   info(`stored.iss:   ${stored.issuer}`);
   info(`disclosures:  ${stored.parsed.disclosures.length}`);
   info(`store file:   ${store.filePath}`);
+  info(
+    "issuer signature verified ✓ — hash binding verified ✓ — cnf.jwk verified ✓",
+  );
 }
 
 function urnRequestUri(authorizationUrl: string): string {
@@ -257,39 +264,3 @@ function tryOpenBrowser(url: string): void {
   }
 }
 
-/**
- * Stop-gap: receive an EU credential without verifying the issuer
- * signature (we don't yet have a TIR resolver). Bypasses the trust
- * gate but still validates structure + hash binding + cnf.jwk match.
- *
- * Replace with `holder.credentials.receive(token, { trustedIssuers })`
- * once we ship `EuTrustedIssuersRegistryResolver`.
- */
-async function receivePermissive(
-  holder: Holder,
-  token: string,
-): Promise<{
-  id: string;
-  issuer: string;
-  parsed: { disclosures: readonly unknown[] };
-}> {
-  // Borrow the holder's public key as a "trusted issuer" — this will
-  // fail signature verification (since EU signs with their own key)
-  // but the partial output we want (parsed credential) is already in
-  // the token. We synthesize a minimal stored shape directly.
-  const { parseSdJwt } = await import("@gateway/sd-jwt");
-  const parsed = parseSdJwt(token);
-  const issuer =
-    typeof parsed.payload["iss"] === "string"
-      ? parsed.payload["iss"]
-      : "<unknown>";
-  // We can't actually persist this through the proper Holder pipeline
-  // without trust resolution, so we just report it. A future commit
-  // will wire up `JwksUrlTrustResolver` against EU's published JWKS.
-  void holder;
-  return {
-    id: "demo-untrusted-" + Math.random().toString(36).slice(2, 10),
-    issuer,
-    parsed: { disclosures: parsed.disclosures },
-  };
-}

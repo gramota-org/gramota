@@ -32,6 +32,7 @@ import {
   validateMetadata,
   type IssuerMetadata,
 } from "@gateway/oid4vci";
+import { SdJwtVcIssuerTrustResolver } from "@gateway/trust";
 
 const LIVE = process.env["EUDI_LIVE"] === "1";
 const dlive = LIVE ? describe : describe.skip;
@@ -256,5 +257,54 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
     // consent, then the AS displays the auth code on an OOB page. That's
     // out of scope for this headless test — but the demo CLI runner can
     // automate the Keycloak login programmatically.
+  }, 20_000);
+
+  it("SdJwtVcIssuerTrustResolver resolves keys from EU's .well-known/jwt-vc-issuer", async () => {
+    // Closes the trust gap that previously forced the demo to skip
+    // issuer-signature verification. EU publishes their PID signing keys
+    // per the IETF SD-JWT-VC issuer-discovery spec.
+    const resolver = new SdJwtVcIssuerTrustResolver();
+    const keys = await resolver.resolveIssuerKeys({
+      iss: ISSUER_BACKEND,
+      kid: undefined,
+      header: {},
+    });
+
+    expect(keys.length).toBeGreaterThan(0);
+
+    // Each key must have the algorithm metadata @gateway/jose needs to verify.
+    for (const key of keys) {
+      const k = key as Record<string, unknown>;
+      expect(k["kty"]).toBeDefined();
+      // EU uses ES256 → P-256 EC keys.
+      if (k["kty"] === "EC") {
+        expect(k["crv"]).toBe("P-256");
+        expect(typeof k["x"]).toBe("string");
+        expect(typeof k["y"]).toBe("string");
+      }
+    }
+  }, 20_000);
+
+  it("SdJwtVcIssuerTrustResolver caches; second lookup is instant", async () => {
+    const resolver = new SdJwtVcIssuerTrustResolver();
+    const t1 = Date.now();
+    await resolver.resolveIssuerKeys({
+      iss: ISSUER_BACKEND,
+      kid: undefined,
+      header: {},
+    });
+    const firstMs = Date.now() - t1;
+
+    const t2 = Date.now();
+    await resolver.resolveIssuerKeys({
+      iss: ISSUER_BACKEND,
+      kid: undefined,
+      header: {},
+    });
+    const secondMs = Date.now() - t2;
+
+    // Cache hit should be at least 10x faster than the network round-trip.
+    expect(secondMs).toBeLessThan(firstMs / 10);
+    expect(secondMs).toBeLessThan(50);
   }, 20_000);
 });
