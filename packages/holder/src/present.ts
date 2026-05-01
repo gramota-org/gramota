@@ -1,8 +1,8 @@
 import { buildKeyBindingJwt } from "@gateway/sd-jwt";
+import type { Signer } from "@gateway/jose";
 import {
   HolderError,
   type CredentialStore,
-  type HolderConfig,
   type PresentOptions,
   type StoredCredential,
 } from "./types.js";
@@ -20,7 +20,7 @@ import {
  *   6. Concatenate prefix + KB-JWT.
  */
 export async function buildPresentation(
-  config: HolderConfig,
+  signer: Signer,
   store: CredentialStore,
   options: PresentOptions,
 ): Promise<string> {
@@ -68,12 +68,11 @@ export async function buildPresentation(
   const presentationPrefix =
     issuerJws + "~" + selected.map((d) => d.raw + "~").join("");
 
-  // 5. Sign the KB-JWT
+  // 5. Sign the KB-JWT — delegate to the Signer Strategy.
   const kbOpts: Parameters<typeof buildKeyBindingJwt>[1] = {
     aud: options.audience,
     nonce: options.nonce,
-    alg: config.alg,
-    privateKey: config.privateKey,
+    signer,
   };
   if (options.now !== undefined) {
     kbOpts.iat = options.now();

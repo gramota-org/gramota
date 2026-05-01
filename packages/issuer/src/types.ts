@@ -1,15 +1,33 @@
-import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
+import type { JsonWebKey, Signer, SupportedAlg } from "@gateway/jose";
 import type { HashAlg, SdJwtDisclosure } from "@gateway/sd-jwt";
 
+/**
+ * Two equivalent ways to give the Issuer its signing capability:
+ *
+ *   - Raw form (shorthand for tests/dev):
+ *       { privateKey, publicKey, alg }
+ *   - Signer form (production with KMS / HSM / signing service):
+ *       { signer: Signer }
+ *
+ * Production issuers nearly always use the Signer form: their root-of-
+ * trust private key lives in an HSM / KMS and is RPC-signed.
+ */
+export type IssuerSignerInput =
+  | {
+      /** Issuer's PRIVATE JWK used to sign credentials. */
+      privateKey: JsonWebKey;
+      /** Issuer's PUBLIC JWK — used by holders to verify. */
+      publicKey: JsonWebKey;
+      /** JWS algorithm. Must be compatible with `privateKey`. */
+      alg: SupportedAlg;
+    }
+  | {
+      /** Production-grade signer Strategy (KMS, HSM, custom). */
+      signer: Signer;
+    };
+
 /** Configuration for an Issuer instance — set once, used per `issue()`. */
-export interface IssuerConfig {
-  /** Issuer's PRIVATE JWK used to sign credentials. */
-  privateKey: JsonWebKey;
-  /** Issuer's PUBLIC JWK — used by holders to verify, and by us for sanity
-   * checks (e.g. confirm the keypair is consistent). */
-  publicKey: JsonWebKey;
-  /** JWS algorithm. Must be compatible with `privateKey`. */
-  alg: SupportedAlg;
+export type IssuerConfig = IssuerSignerInput & {
   /** Issuer identifier (a stable URL). Becomes the `iss` claim. */
   issuerId: string;
   /** Hash algorithm for selective-disclosure digests. Default `sha-256`. */
@@ -18,7 +36,7 @@ export interface IssuerConfig {
   kid?: string;
   /** JOSE `typ` header. Default `vc+sd-jwt` (per SD-JWT-VC spec). */
   typ?: string;
-}
+};
 
 export interface IssueOptions {
   /** All claims that will go into the credential. Top-level keys become

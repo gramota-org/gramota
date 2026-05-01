@@ -27,6 +27,7 @@ const VCT = "https://credentials.example.com/pid";
 const AUTHZ_ENDPOINT = `${ISSUER_URL}/authorize`;
 const TOKEN_ENDPOINT = `${ISSUER_URL}/token`;
 const CRED_ENDPOINT = `${ISSUER_URL}/credential`;
+const PAR_ENDPOINT = `${ISSUER_URL}/par`;
 const REDIRECT_URI = "https://wallet.example.com/cb";
 const CONFIG_ID = "pid";
 
@@ -63,6 +64,8 @@ function mockIssuerFetcher(opts: MockOpts): Fetcher {
         credential_endpoint: CRED_ENDPOINT,
         token_endpoint: TOKEN_ENDPOINT,
         authorization_endpoint: AUTHZ_ENDPOINT,
+        // RFC 9126 PAR is mandatory in the SDK.
+        pushed_authorization_request_endpoint: PAR_ENDPOINT,
         credential_configurations_supported: {
           [CONFIG_ID]: {
             format: "vc+sd-jwt",
@@ -74,6 +77,26 @@ function mockIssuerFetcher(opts: MockOpts): Fetcher {
             },
           },
         },
+      });
+    }
+
+    // PAR endpoint — RFC 9126
+    if (method === "POST" && url === PAR_ENDPOINT) {
+      const params = new URLSearchParams(init!.body as string);
+      if (params.get("client_id") !== opts.expectedClientId) {
+        return jsonErr(400, "client_id_mismatch");
+      }
+      if (params.get("redirect_uri") !== opts.expectedRedirectUri) {
+        return jsonErr(400, "redirect_uri_mismatch");
+      }
+      if (params.get("code_challenge") !== opts.expectedCodeChallenge) {
+        return jsonErr(400, "code_challenge_mismatch");
+      }
+      return jsonOk({
+        request_uri: `urn:ietf:params:oauth:request_uri:test-${Math.random()
+          .toString(36)
+          .slice(2, 10)}`,
+        expires_in: 60,
       });
     }
 
@@ -197,15 +220,19 @@ describe("holder.offers.authorize — step 1 (build URL, return secrets)", () =>
     expect(start.codeVerifier).toBe(codeVerifier);
     expect(start.state).toBe("csrf-1");
 
+    // Post-PAR URL: only client_id + request_uri. All other params went
+    // to the PAR endpoint (which validates them) and got bound to the URN.
     const u = new URL(start.authorizationUrl);
     expect(`${u.origin}${u.pathname}`).toBe(AUTHZ_ENDPOINT);
-    expect(u.searchParams.get("response_type")).toBe("code");
-    expect(u.searchParams.get("redirect_uri")).toBe(REDIRECT_URI);
-    expect(u.searchParams.get("state")).toBe("csrf-1");
-    expect(u.searchParams.get("code_challenge")).toBe(expectedChallenge);
-    expect(u.searchParams.get("code_challenge_method")).toBe("S256");
+    expect(u.searchParams.get("request_uri")).toMatch(
+      /^urn:ietf:params:oauth:request_uri:/,
+    );
     // public client default: client_id == redirect_uri
     expect(u.searchParams.get("client_id")).toBe(REDIRECT_URI);
+    // Sensitive params must NOT appear on the URL (PAR's whole point).
+    expect(u.searchParams.get("code_challenge")).toBeNull();
+    expect(u.searchParams.get("redirect_uri")).toBeNull();
+    expect(u.searchParams.get("state")).toBeNull();
   });
 });
 

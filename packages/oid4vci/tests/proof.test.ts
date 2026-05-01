@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { verifyJws } from "@gateway/jose";
+import { JwkSigner, verifyJws, type JsonWebKey, type Signer } from "@gateway/jose";
 import { buildProofJwt } from "../src/index.js";
 
 async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {
@@ -14,14 +13,13 @@ async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {
   };
 }
 
-describe("buildProofJwt", () => {
+describe("buildProofJwt — default JwkSigner", () => {
   it("produces a valid signed JWT verifiable with the embedded jwk", async () => {
     const { pub, priv } = await makeKey();
+    const signer = new JwkSigner({ publicKey: pub, privateKey: priv, alg: "ES256" });
     const jwt = await buildProofJwt({
       audience: "https://issuer.example.com",
-      publicKey: pub,
-      privateKey: priv,
-      alg: "ES256",
+      signer,
       nonce: "c-nonce-1",
       iat: 1700000000,
     });
@@ -37,11 +35,10 @@ describe("buildProofJwt", () => {
 
   it("embeds the holder's public JWK in the JOSE header (jwk parameter)", async () => {
     const { pub, priv } = await makeKey();
+    const signer = new JwkSigner({ publicKey: pub, privateKey: priv, alg: "ES256" });
     const jwt = await buildProofJwt({
       audience: "https://issuer.example.com",
-      publicKey: pub,
-      privateKey: priv,
-      alg: "ES256",
+      signer,
       iat: 1700000000,
     });
     const headerB64 = jwt.split(".")[0]!;
@@ -53,11 +50,10 @@ describe("buildProofJwt", () => {
 
   it("omits nonce when not supplied", async () => {
     const { pub, priv } = await makeKey();
+    const signer = new JwkSigner({ publicKey: pub, privateKey: priv, alg: "ES256" });
     const jwt = await buildProofJwt({
       audience: "https://issuer.example.com",
-      publicKey: pub,
-      privateKey: priv,
-      alg: "ES256",
+      signer,
       iat: 1700000000,
     });
     const verified = await verifyJws(jwt, pub);
@@ -66,15 +62,50 @@ describe("buildProofJwt", () => {
 
   it("includes iss when provided", async () => {
     const { pub, priv } = await makeKey();
+    const signer = new JwkSigner({ publicKey: pub, privateKey: priv, alg: "ES256" });
     const jwt = await buildProofJwt({
       audience: "https://issuer.example.com",
-      publicKey: pub,
-      privateKey: priv,
-      alg: "ES256",
+      signer,
       iat: 1700000000,
       iss: "https://wallet.example.com",
     });
     const verified = await verifyJws(jwt, pub);
     expect(verified.payload["iss"]).toBe("https://wallet.example.com");
+  });
+});
+
+describe("buildProofJwt — custom Signer (extensibility / HSM-style)", () => {
+  it("accepts any Signer; the orchestrator never sees the private key", async () => {
+    const { pub, priv } = await makeKey();
+    let signCallCount = 0;
+
+    // Stand-in for an HSM/WebAuthn signer: implements Signer without
+    // exposing a private key on the instance. The actual signing here
+    // delegates to a JwkSigner under the hood for test simplicity, but
+    // the surface contract is identical to a real hardware-backed signer.
+    class CapturingSigner implements Signer {
+      readonly publicKey = pub;
+      readonly alg = "ES256" as const;
+      private readonly inner = new JwkSigner({
+        publicKey: pub,
+        privateKey: priv,
+        alg: "ES256",
+      });
+      async sign(signedPayload: string): Promise<string> {
+        signCallCount++;
+        return await this.inner.sign(signedPayload);
+      }
+    }
+
+    const jwt = await buildProofJwt({
+      audience: "https://issuer.example.com",
+      signer: new CapturingSigner(),
+      iat: 1700000000,
+    });
+
+    expect(signCallCount).toBe(1);
+    const verified = await verifyJws(jwt, pub);
+    expect(verified.alg).toBe("ES256");
+    expect(verified.payload["aud"]).toBe("https://issuer.example.com");
   });
 });

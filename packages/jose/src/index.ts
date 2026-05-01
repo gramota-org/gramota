@@ -8,6 +8,12 @@ export { signJws } from "./sign.js";
 export { makeSigner } from "./make-signer.js";
 export type { SignJwsOptions } from "./sign.js";
 export {
+  JwkSigner,
+  asSigner,
+  type JwkSignerOptions,
+  type Signer,
+} from "./signer.js";
+export {
   extractPublicKeyFromX5c,
   parseX5cEntry,
   validateX5cChain,

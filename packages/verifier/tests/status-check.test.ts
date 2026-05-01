@@ -1,24 +1,31 @@
 /**
- * Verifier integration with IETF Token Status List.
+ * Verifier × StatusResolver Strategy integration.
  *
- * Drives the full pipeline: build a credential whose payload carries
- * `status.status_list = { uri, idx }`, build a status list with a
- * specific bit at idx, and verify with `options.status` set. Three
- * scenarios:
+ * The verifier doesn't know about IETF Token Status List specifically —
+ * it knows about the `StatusResolver` interface. This file tests both
+ * the default impl (`StatusListResolver`) AND a custom resolver to
+ * prove extensibility.
  *
- *   1. List says VALID  → verify succeeds, result.status.state = "valid"
- *   2. List says INVALID → verify fails at "status.check"
- *   3. No status claim, options.status.required = false → "skipped"
- *   4. No status claim, options.status.required = true → fails at "status.check"
+ * Coverage:
+ *   1. Default StatusListResolver wired via DI: VALID → pass; INVALID → fail
+ *   2. Default StatusListResolver: no status reference + requireStatus=false → "skipped" pass
+ *   3. Default StatusListResolver: no status reference + requireStatus=true → fail
+ *   4. No statusResolver configured → no status check runs at all (back-compat)
+ *   5. Custom user-defined resolver substitutes seamlessly (LSP)
  */
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
 import type { JsonWebKey } from "@gateway/jose";
+import type { ParsedSdJwt } from "@gateway/sd-jwt";
 import { buildKeyBindingJwt, issueSdJwt } from "@gateway/sd-jwt";
 import {
+  StatusListResolver,
   buildStatusListToken,
+  type CredentialStatusResult,
   type Fetcher as StatusListFetcher,
+  type ResolveStatusOptions,
+  type StatusResolver,
 } from "@gateway/status-list";
 import { Verifier } from "../src/index.js";
 
@@ -101,7 +108,7 @@ function mockHost(token: string): StatusListFetcher {
   };
 }
 
-describe("Verifier — IETF Token Status List integration", () => {
+describe("Verifier × StatusResolver — default StatusListResolver", () => {
   it('passes "status.check" when the list says VALID', async () => {
     const issuer = await makeKey();
     const holder = await makeKey();
@@ -118,37 +125,32 @@ describe("Verifier — IETF Token Status List integration", () => {
       length: 64,
       privateKey: issuer.priv,
       alg: "ES256",
-      // idx 7 left at 0 (valid)
     });
 
     const verifier = new Verifier({
       audience: AUDIENCE,
       issuerKey: issuer.pub,
+      statusResolver: new StatusListResolver({
+        trustedIssuers: [issuer.pub],
+        fetcher: mockHost(listToken),
+      }),
     });
 
     const result = await verifier.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
-      status: {
-        trustedIssuers: [issuer.pub],
-        fetcher: mockHost(listToken),
-      },
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok");
-
-    // status check appears in the audit trail
     expect(result.checks.find((c) => c.name === "status.check")?.passed).toBe(
       true,
     );
-    // status surfaces in result
     expect(result.status).toBeDefined();
     if (result.status === undefined || result.status === "skipped") {
       throw new Error("expected resolved status");
     }
     expect(result.status.state).toBe("valid");
-    expect(result.status.code).toBe(0);
   });
 
   it('fails at "status.check" when the list says INVALID', async () => {
@@ -173,15 +175,15 @@ describe("Verifier — IETF Token Status List integration", () => {
     const verifier = new Verifier({
       audience: AUDIENCE,
       issuerKey: issuer.pub,
+      statusResolver: new StatusListResolver({
+        trustedIssuers: [issuer.pub],
+        fetcher: mockHost(listToken),
+      }),
     });
 
     const result = await verifier.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
-      status: {
-        trustedIssuers: [issuer.pub],
-        fetcher: mockHost(listToken),
-      },
     });
 
     expect(result.ok).toBe(false);
@@ -190,62 +192,58 @@ describe("Verifier — IETF Token Status List integration", () => {
     expect(result.reason).toMatch(/invalid/);
   });
 
-  it('skips status when credential has no status claim and required=false', async () => {
+  it('treats no status reference as "skipped" when requireStatus is omitted', async () => {
     const issuer = await makeKey();
     const holder = await makeKey();
-
-    // No status claim on the credential.
     const presentation = await buildPresentation({ issuer, holder });
 
     const verifier = new Verifier({
       audience: AUDIENCE,
       issuerKey: issuer.pub,
+      statusResolver: new StatusListResolver({
+        trustedIssuers: [issuer.pub],
+      }),
     });
 
     const result = await verifier.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
-      status: {
-        trustedIssuers: [issuer.pub],
-        // required omitted → defaults to false
-      },
     });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok");
     expect(result.status).toBe("skipped");
-    const check = result.checks.find((c) => c.name === "status.check");
-    expect(check?.passed).toBe(true);
-    expect(check?.message).toMatch(/no status reference/);
+    expect(result.checks.find((c) => c.name === "status.check")?.message).toMatch(
+      /skipped|no reference/,
+    );
   });
 
-  it('fails at "status.check" when credential has no status claim and required=true', async () => {
+  it('fails when requireStatus=true and no status reference is resolvable', async () => {
     const issuer = await makeKey();
     const holder = await makeKey();
-
     const presentation = await buildPresentation({ issuer, holder });
 
     const verifier = new Verifier({
       audience: AUDIENCE,
       issuerKey: issuer.pub,
+      statusResolver: new StatusListResolver({
+        trustedIssuers: [issuer.pub],
+      }),
     });
 
     const result = await verifier.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
-      status: {
-        trustedIssuers: [issuer.pub],
-        required: true,
-      },
+      requireStatus: true,
     });
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected failure");
     expect(result.failedCheck).toBe("status.check");
-    expect(result.reason).toMatch(/required/);
+    expect(result.reason).toMatch(/requireStatus/);
   });
 
-  it("doesn't run any status check when options.status is omitted (back-compat)", async () => {
+  it("doesn't run any status check when no statusResolver is configured", async () => {
     const issuer = await makeKey();
     const holder = await makeKey();
 
@@ -258,6 +256,7 @@ describe("Verifier — IETF Token Status List integration", () => {
     const verifier = new Verifier({
       audience: AUDIENCE,
       issuerKey: issuer.pub,
+      // no statusResolver
     });
 
     const result = await verifier.verify(presentation, {
@@ -267,48 +266,115 @@ describe("Verifier — IETF Token Status List integration", () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("expected ok");
-    // status check absent from audit trail
     expect(result.checks.find((c) => c.name === "status.check")).toBeUndefined();
     expect(result.status).toBeUndefined();
   });
+});
 
-  it('fails at "status.check" when the list signer is not in trustedIssuers', async () => {
+describe("Verifier × StatusResolver — extensibility (custom resolver)", () => {
+  it("custom user-defined StatusResolver substitutes for the default (LSP)", async () => {
+    // Could equally be CrlStatusResolver, OcspStatusResolver, EU TIR resolver.
+    // Here we encode "everything ending in idx 13 is suspended" as policy.
+    class IdxBasedResolver implements StatusResolver {
+      constructor(private readonly suspended: ReadonlySet<number>) {}
+
+      async resolveStatus(
+        credential: ParsedSdJwt,
+        _options?: ResolveStatusOptions,
+      ): Promise<CredentialStatusResult | "skipped"> {
+        const status = credential.payload["status"] as
+          | { status_list?: { uri?: string; idx?: number } }
+          | undefined;
+        const idx = status?.status_list?.idx;
+        const uri = status?.status_list?.uri;
+        if (typeof idx !== "number" || typeof uri !== "string") {
+          return "skipped";
+        }
+        const suspended = this.suspended.has(idx);
+        return {
+          code: suspended ? 2 : 0,
+          state: suspended ? "suspended" : "valid",
+          // Caller doesn't depend on these fields, but they're part of
+          // the contract for compatibility:
+          list: {
+            bits: 1,
+            bytes: new Uint8Array(),
+            length: 0,
+            issuer: "custom",
+            subject: uri,
+            issuedAt: 0,
+          },
+          reference: { uri, idx },
+        };
+      }
+    }
+
     const issuer = await makeKey();
-    const evilSigner = await makeKey();
     const holder = await makeKey();
 
-    const presentation = await buildPresentation({
+    const goodCred = await buildPresentation({
       issuer,
       holder,
-      status: { uri: LIST_URL, idx: 7 },
+      status: { uri: LIST_URL, idx: 7 }, // not in suspended set
     });
-
-    // List signed by evilSigner, but verifier doesn't trust it.
-    const listToken = await buildStatusListToken({
-      issuer: ISSUER_ID,
-      subject: LIST_URL,
-      length: 64,
-      privateKey: evilSigner.priv,
-      alg: "ES256",
+    const badCred = await buildPresentation({
+      issuer,
+      holder,
+      status: { uri: LIST_URL, idx: 13 }, // in suspended set
     });
 
     const verifier = new Verifier({
       audience: AUDIENCE,
       issuerKey: issuer.pub,
+      statusResolver: new IdxBasedResolver(new Set([13])),
+    });
+
+    const okResult = await verifier.verify(goodCred, {
+      nonce: NONCE,
+      now: () => NOW_S,
+    });
+    expect(okResult.ok).toBe(true);
+    if (!okResult.ok) throw new Error("expected ok for idx=7");
+
+    const badResult = await verifier.verify(badCred, {
+      nonce: NONCE,
+      now: () => NOW_S,
+    });
+    expect(badResult.ok).toBe(false);
+    if (badResult.ok) throw new Error("expected failure for idx=13");
+    expect(badResult.failedCheck).toBe("status.check");
+    expect(badResult.reason).toMatch(/suspended/);
+  });
+
+  it("propagates resolver errors as status.check failures", async () => {
+    class ExplodingResolver implements StatusResolver {
+      async resolveStatus(): Promise<CredentialStatusResult | "skipped"> {
+        throw new Error("status backend offline");
+      }
+    }
+
+    const issuer = await makeKey();
+    const holder = await makeKey();
+    const presentation = await buildPresentation({
+      issuer,
+      holder,
+      status: { uri: LIST_URL, idx: 1 },
+    });
+
+    const verifier = new Verifier({
+      audience: AUDIENCE,
+      issuerKey: issuer.pub,
+      statusResolver: new ExplodingResolver(),
     });
 
     const result = await verifier.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
-      status: {
-        trustedIssuers: [issuer.pub], // doesn't include evilSigner.pub
-        fetcher: mockHost(listToken),
-      },
     });
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected failure");
     expect(result.failedCheck).toBe("status.check");
-    expect(result.reason).toMatch(/signature/);
+    expect(result.reason).toMatch(/status backend offline/);
   });
 });

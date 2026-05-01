@@ -4,12 +4,15 @@ import {
   verifyHashBinding,
   type ParsedSdJwt,
 } from "@gateway/sd-jwt";
-import { verifyJws, JoseVerificationError } from "@gateway/jose";
+import {
+  verifyJws,
+  JoseVerificationError,
+  type Signer,
+} from "@gateway/jose";
 import { publicJwksEqual } from "./jwk-equal.js";
 import {
   HolderError,
   type CredentialStore,
-  type HolderConfig,
   type ReceiveOptions,
   type StoredCredential,
 } from "./types.js";
@@ -27,7 +30,7 @@ import {
  */
 export async function receiveCredential(
   token: string,
-  config: HolderConfig,
+  signer: Signer,
   store: CredentialStore,
   options: ReceiveOptions,
 ): Promise<StoredCredential> {
@@ -92,7 +95,7 @@ export async function receiveCredential(
     );
   }
   const cnfJwk = (cnf as Record<string, unknown>)["jwk"];
-  if (!publicJwksEqual(cnfJwk, config.publicKey)) {
+  if (!publicJwksEqual(cnfJwk, signer.publicKey)) {
     throw new HolderError(
       "holder.cnf_mismatch",
       "credential cnf.jwk does not match this holder's public key — credential was issued to a different holder",

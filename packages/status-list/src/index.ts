@@ -33,3 +33,10 @@ export {
   buildStatusListToken,
   type BuildStatusListOptions,
 } from "./build.js";
+
+export {
+  StatusListResolver,
+  type ResolveStatusOptions,
+  type StatusListResolverConfig,
+  type StatusResolver,
+} from "./resolver.js";

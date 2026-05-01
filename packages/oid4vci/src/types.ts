@@ -130,7 +130,10 @@ export type Oid4vciErrorCode =
   | "oid4vci.credential_response_invalid"
   | "oid4vci.config_not_found"
   | "oid4vci.tx_code_required"
-  | "oid4vci.invalid_input";
+  | "oid4vci.invalid_input"
+  | "oid4vci.par_request_failed"
+  | "oid4vci.par_response_invalid"
+  | "oid4vci.par_endpoint_missing";
 
 export class Oid4vciError extends Error {
   override readonly name = "Oid4vciError";

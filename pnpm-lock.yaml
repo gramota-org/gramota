@@ -21,6 +21,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@20.19.39)
 
+  packages/credential-format: {}
+
   packages/dcql:
     dependencies:
       '@gateway/sd-jwt':
@@ -120,6 +122,9 @@ importers:
 
   packages/oid4vci:
     dependencies:
+      '@gateway/credential-format':
+        specifier: workspace:*
+        version: link:../credential-format
       '@gateway/jose':
         specifier: workspace:*
         version: link:../jose

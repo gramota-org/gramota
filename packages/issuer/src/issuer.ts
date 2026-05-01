@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { issueSdJwt, type HashAlg } from "@gateway/sd-jwt";
-import { makeSigner } from "@gateway/jose";
+import { asSigner, type JsonWebKey, type Signer } from "@gateway/jose";
 import {
   IssuerError,
   type IssueOptions,
@@ -15,42 +15,33 @@ const DEFAULT_HASH_ALG: HashAlg = "sha-256";
  * The issuer role per IETF SD-JWT-VC §3.
  *
  * Wraps `issueSdJwt` (the low-level primitive in `@gateway/sd-jwt`) with:
- *   - stateful config (key, alg, issuer id, optional kid),
+ *   - stateful config (signer, issuer id, optional kid/typ/hashAlg),
  *   - holder-binding (cnf.jwk),
  *   - sensible expiry handling (`expiresIn` or `expiresAt`),
  *   - validation: every claim listed in `selectivelyDisclosable` must
  *     appear in `subject`,
- *   - JOSE signing via `@gateway/jose.makeSigner` (no direct `jose` dep
- *     here — Dependency Inversion against the jose library).
+ *   - {@link Signer} Strategy for signing — accepts raw JWKs (shorthand)
+ *     or production-grade Signers (HSM, KMS, custom backends).
  */
 export class Issuer {
-  private readonly config: Required<
-    Pick<IssuerConfig, "privateKey" | "publicKey" | "alg" | "issuerId">
-  > &
-    Pick<IssuerConfig, "kid" | "typ" | "hashAlg">;
+  /** The issuer's signer. Either supplied directly via `config.signer`
+   * (production: HSM/KMS) or built from raw JWKs via {@link asSigner}. */
+  private readonly signer: Signer;
+  /** Stable issuer id (`iss` claim). */
+  private readonly issuerIdValue: string;
+  private readonly kid: string | undefined;
+  private readonly typ: string | undefined;
+  private readonly hashAlg: HashAlg | undefined;
 
   constructor(config: IssuerConfig) {
-    if (config.privateKey === null || typeof config.privateKey !== "object") {
-      throw new TypeError("Issuer: privateKey is required (a JsonWebKey)");
-    }
-    if (config.publicKey === null || typeof config.publicKey !== "object") {
-      throw new TypeError("Issuer: publicKey is required (a JsonWebKey)");
-    }
-    if (typeof config.alg !== "string" || config.alg.length === 0) {
-      throw new TypeError("Issuer: alg is required");
-    }
     if (typeof config.issuerId !== "string" || config.issuerId.length === 0) {
       throw new TypeError("Issuer: issuerId is required (a stable URL)");
     }
-    this.config = {
-      privateKey: config.privateKey,
-      publicKey: config.publicKey,
-      alg: config.alg,
-      issuerId: config.issuerId,
-    };
-    if (config.kid !== undefined) this.config.kid = config.kid;
-    if (config.typ !== undefined) this.config.typ = config.typ;
-    if (config.hashAlg !== undefined) this.config.hashAlg = config.hashAlg;
+    this.signer = normalizeIssuerSigner(config);
+    this.issuerIdValue = config.issuerId;
+    this.kid = config.kid;
+    this.typ = config.typ;
+    this.hashAlg = config.hashAlg;
   }
 
   /** Issue a single SD-JWT-VC credential bound to a holder. */
@@ -72,7 +63,7 @@ export class Issuer {
     }
 
     const payload: Record<string, unknown> = {
-      iss: this.config.issuerId,
+      iss: this.issuerIdValue,
       iat: issuedAt,
       vct: options.vct,
       cnf: { jwk: options.holderKey },
@@ -82,18 +73,20 @@ export class Issuer {
     if (options.notBefore !== undefined) payload["nbf"] = options.notBefore;
     if (options.status !== undefined) payload["status"] = options.status;
 
-    const signer = await makeSigner(this.config.privateKey, this.config.alg);
+    // Adapt the Signer to issueSdJwt's `signer: (s) => Promise<sig>` shape.
+    const signFn = (signedPayload: string): Promise<string> =>
+      this.signer.sign(signedPayload);
 
     const issueOpts: Parameters<typeof issueSdJwt>[0] = {
       payload,
       sdClaims,
-      alg: this.config.alg,
-      typ: this.config.typ ?? DEFAULT_TYP,
-      signer,
-      hashAlg: this.config.hashAlg ?? DEFAULT_HASH_ALG,
+      alg: this.signer.alg,
+      typ: this.typ ?? DEFAULT_TYP,
+      signer: signFn,
+      hashAlg: this.hashAlg ?? DEFAULT_HASH_ALG,
     };
-    if (this.config.kid !== undefined) {
-      issueOpts.extraHeader = { kid: this.config.kid };
+    if (this.kid !== undefined) {
+      issueOpts.extraHeader = { kid: this.kid };
     }
 
     const result = await issueSdJwt(issueOpts);
@@ -107,14 +100,47 @@ export class Issuer {
   }
 
   /** The issuer's public JWK — useful to publish at /.well-known/jwks.json. */
-  get publicKey(): IssuerConfig["publicKey"] {
-    return this.config.publicKey;
+  get publicKey(): JsonWebKey {
+    return this.signer.publicKey;
   }
 
   /** The issuer's identifier — useful for downstream URLs. */
   get issuerId(): string {
-    return this.config.issuerId;
+    return this.issuerIdValue;
   }
+}
+
+/**
+ * Normalize the Issuer config into a Signer (raw JWKs OR Signer).
+ */
+function normalizeIssuerSigner(config: IssuerConfig): Signer {
+  if (
+    "signer" in config &&
+    config.signer !== undefined &&
+    typeof (config.signer as Signer).sign === "function"
+  ) {
+    return config.signer;
+  }
+  if (
+    "privateKey" in config &&
+    "publicKey" in config &&
+    "alg" in config &&
+    config.privateKey !== null &&
+    typeof config.privateKey === "object" &&
+    config.publicKey !== null &&
+    typeof config.publicKey === "object" &&
+    typeof config.alg === "string" &&
+    config.alg.length > 0
+  ) {
+    return asSigner({
+      publicKey: config.publicKey,
+      privateKey: config.privateKey,
+      alg: config.alg,
+    });
+  }
+  throw new TypeError(
+    "Issuer: pass either { privateKey, publicKey, alg } (raw shorthand) or { signer } (production)",
+  );
 }
 
 // ---------------------------------------------------------------------------

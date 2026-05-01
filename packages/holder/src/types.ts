@@ -1,4 +1,4 @@
-import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
+import type { JsonWebKey, Signer, SupportedAlg } from "@gateway/jose";
 import type { ParsedSdJwt } from "@gateway/sd-jwt";
 
 /** Identifier of a stored credential. UUID v4, generated at receive time. */
@@ -40,19 +40,38 @@ export interface CredentialStore {
   remove(id: CredentialId): Promise<boolean>;
 }
 
+/**
+ * Two equivalent ways to give the Holder its signing capability:
+ *
+ *   - Raw form (shorthand for tests/dev):
+ *       { privateKey, publicKey, alg }
+ *   - Signer form (production with HSM/WebAuthn/Secure Enclave):
+ *       { signer: Signer }
+ */
+export type HolderSignerInput =
+  | {
+      /** Holder's PRIVATE JWK. Used to sign Key Binding JWTs. Public part
+       * must match `cnf.jwk` of received credentials. */
+      privateKey: JsonWebKey;
+      /** Holder's PUBLIC JWK. Used to validate `cnf.jwk` matches at
+       * receive time and to inform issuers (out of band) what to bind
+       * credentials to. */
+      publicKey: JsonWebKey;
+      /** JWS algorithm. Must be compatible with the key. */
+      alg: SupportedAlg;
+    }
+  | {
+      /** A Signer Strategy — production-grade alternative to raw keys.
+       * Lets the wallet plug in WebAuthn / iOS Secure Enclave / HSM
+       * backends without exposing private key material. */
+      signer: Signer;
+    };
+
 /** Configuration for a Holder instance. */
-export interface HolderConfig {
-  /** Holder's PRIVATE JWK. Used to sign Key Binding JWTs. Public part must
-   * match `cnf.jwk` of received credentials. */
-  privateKey: JsonWebKey;
-  /** Holder's PUBLIC JWK. Used to validate `cnf.jwk` matches at receive time
-   * and to inform issuers (out of band) what to bind credentials to. */
-  publicKey: JsonWebKey;
-  /** JWS algorithm. Must be compatible with the key. */
-  alg: SupportedAlg;
+export type HolderConfig = HolderSignerInput & {
   /** Storage backend. Default: in-memory (lost on process exit). */
   store?: CredentialStore;
-}
+};
 
 export interface ReceiveOptions {
   /** Public JWKs of issuers the holder trusts. The credential's signature

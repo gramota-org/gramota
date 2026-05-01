@@ -1,4 +1,4 @@
-import type { JsonWebKey } from "@gateway/jose";
+import { asSigner, type JsonWebKey, type Signer } from "@gateway/jose";
 import {
   buildAuthorizationResponseBody,
   parseAuthorizationRequestUrl,
@@ -174,7 +174,11 @@ interface PendingAuthCodeFlow {
 }
 
 export class Holder {
-  private readonly config: HolderConfig;
+  /** The Holder's signer. Either supplied directly via `config.signer`
+   * (production wallets backed by HSM/WebAuthn/Secure Enclave) or built
+   * from raw JWKs via {@link asSigner}. Used to sign KB-JWTs and OID4VCI
+   * proof JWTs — never exposes the private key downstream. */
+  private readonly signer: Signer;
   private readonly store: CredentialStore;
   /** In-flight auth-code flows, keyed by `state`. Removed on `claim()`. */
   private readonly pendingFlows = new Map<string, PendingAuthCodeFlow>();
@@ -186,35 +190,23 @@ export class Holder {
   readonly offers: OffersApi;
 
   constructor(config: HolderConfig) {
-    if (config.privateKey === null || typeof config.privateKey !== "object") {
-      throw new TypeError("Holder: privateKey is required");
-    }
-    if (config.publicKey === null || typeof config.publicKey !== "object") {
-      throw new TypeError("Holder: publicKey is required");
-    }
-    if (typeof config.alg !== "string" || config.alg.length === 0) {
-      throw new TypeError("Holder: alg is required");
-    }
-    this.config = config;
+    this.signer = normalizeHolderSigner(config);
     this.store = config.store ?? new InMemoryCredentialStore();
 
     this.credentials = {
       receive: (token, options) =>
-        receiveCredential(token, this.config, this.store, options),
+        receiveCredential(token, this.signer, this.store, options),
       get: (id) => this.store.get(id),
       list: (query) => this.store.list(query),
       remove: (id) => this.store.remove(id),
     };
 
     // OID4VCI client — built lazily so tests that don't use it incur no cost.
+    // Pass the SAME Signer to keep cnf.jwk consistent end-to-end.
     let oid4vciClient: Oid4vciClient | undefined;
     const ensureClient = (): Oid4vciClient => {
       if (oid4vciClient === undefined) {
-        oid4vciClient = new Oid4vciClient({
-          holderPublicKey: this.config.publicKey,
-          holderPrivateKey: this.config.privateKey,
-          alg: this.config.alg,
-        });
+        oid4vciClient = new Oid4vciClient({ signer: this.signer });
       }
       return oid4vciClient;
     };
@@ -235,7 +227,7 @@ export class Holder {
         // Validate + store using the same path as credentials.receive.
         return await receiveCredential(
           result.credential,
-          this.config,
+          this.signer,
           this.store,
           { trustedIssuers: options.trustedIssuers },
         );
@@ -336,7 +328,7 @@ export class Holder {
 
         return await receiveCredential(
           result.credential,
-          this.config,
+          this.signer,
           this.store,
           { trustedIssuers: options.trustedIssuers },
         );
@@ -346,12 +338,12 @@ export class Holder {
 
   /** Build a selective-disclosure presentation against a stored credential. */
   present(options: PresentOptions): Promise<string> {
-    return buildPresentation(this.config, this.store, options);
+    return buildPresentation(this.signer, this.store, options);
   }
 
   /** Public key — useful to share with issuers so they can bind credentials. */
-  get publicKey(): HolderConfig["publicKey"] {
-    return this.config.publicKey;
+  get publicKey(): JsonWebKey {
+    return this.signer.publicKey;
   }
 
   /**
@@ -454,3 +446,37 @@ export class Holder {
 }
 
 export { HolderError };
+
+/**
+ * Normalize the Holder's signer-input config (raw JWKs OR Signer)
+ * into a Signer instance. Throws TypeError if neither shape is met.
+ */
+function normalizeHolderSigner(config: HolderConfig): Signer {
+  if (
+    "signer" in config &&
+    config.signer !== undefined &&
+    typeof (config.signer as Signer).sign === "function"
+  ) {
+    return config.signer;
+  }
+  if (
+    "privateKey" in config &&
+    "publicKey" in config &&
+    "alg" in config &&
+    config.privateKey !== null &&
+    typeof config.privateKey === "object" &&
+    config.publicKey !== null &&
+    typeof config.publicKey === "object" &&
+    typeof config.alg === "string" &&
+    config.alg.length > 0
+  ) {
+    return asSigner({
+      publicKey: config.publicKey,
+      privateKey: config.privateKey,
+      alg: config.alg,
+    });
+  }
+  throw new TypeError(
+    "Holder: pass either { privateKey, publicKey, alg } (raw shorthand) or { signer } (production)",
+  );
+}

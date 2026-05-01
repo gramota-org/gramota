@@ -35,6 +35,46 @@ export interface BuiltAuthorizationUrl {
 }
 
 /**
+ * Build the canonical authorization parameters (OAuth + PKCE + OID4VCI
+ * `authorization_details`). Shared between the direct auth-URL path and
+ * the PAR (RFC 9126) path so they're guaranteed identical.
+ */
+export function buildAuthorizationParams(
+  options: BuildAuthorizationUrlOptions,
+): {
+  params: Record<string, string>;
+  codeVerifier: string;
+  state: string;
+} {
+  validateRequiredFields(options);
+
+  const codeVerifier = options.codeVerifier ?? generateCodeVerifier();
+  const state = options.state ?? generateState();
+
+  const params: Record<string, string> = {
+    response_type: "code",
+    client_id: options.clientId,
+    redirect_uri: options.redirectUri,
+    state,
+    code_challenge: codeChallenge(codeVerifier),
+    code_challenge_method: "S256",
+    // OID4VCI §5.1.2: authorization_details signals the credential being requested.
+    authorization_details: JSON.stringify([
+      {
+        type: "openid_credential",
+        credential_configuration_id: options.credentialConfigurationId,
+      },
+    ]),
+  };
+  if (options.scope !== undefined) params["scope"] = options.scope;
+  if (options.issuerState !== undefined) {
+    params["issuer_state"] = options.issuerState;
+  }
+
+  return { params, codeVerifier, state };
+}
+
+/**
  * Build the authorization URL for OID4VCI auth-code flow + PKCE per
  * OID4VCI §4 + RFC 7636.
  *
@@ -45,33 +85,11 @@ export interface BuiltAuthorizationUrl {
 export function buildAuthorizationUrl(
   options: BuildAuthorizationUrlOptions,
 ): BuiltAuthorizationUrl {
-  validateRequiredFields(options);
-
-  const codeVerifier = options.codeVerifier ?? generateCodeVerifier();
-  const state = options.state ?? generateState();
+  const { params, codeVerifier, state } = buildAuthorizationParams(options);
 
   const url = new URL(options.authorizationEndpoint);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("client_id", options.clientId);
-  url.searchParams.set("redirect_uri", options.redirectUri);
-  url.searchParams.set("state", state);
-  url.searchParams.set("code_challenge", codeChallenge(codeVerifier));
-  url.searchParams.set("code_challenge_method", "S256");
-
-  // OID4VCI §5.1.2: authorization_details signals the credential being requested.
-  url.searchParams.set(
-    "authorization_details",
-    JSON.stringify([
-      {
-        type: "openid_credential",
-        credential_configuration_id: options.credentialConfigurationId,
-      },
-    ]),
-  );
-
-  if (options.scope !== undefined) url.searchParams.set("scope", options.scope);
-  if (options.issuerState !== undefined) {
-    url.searchParams.set("issuer_state", options.issuerState);
+  for (const [k, v] of Object.entries(params)) {
+    url.searchParams.set(k, v);
   }
 
   return {
@@ -79,6 +97,169 @@ export function buildAuthorizationUrl(
     codeVerifier,
     state,
   };
+}
+
+/**
+ * Build the post-PAR authorization URL (RFC 9126 §4): once the wallet has
+ * pushed its parameters and received a `request_uri`, the redirect URL
+ * carries only `client_id` + `request_uri`. No PKCE, no `redirect_uri`,
+ * no `state` — the AS already has them, bound to the URN.
+ */
+export function buildPostParAuthorizationUrl(
+  authorizationEndpoint: string,
+  clientId: string,
+  requestUri: string,
+): string {
+  if (
+    typeof authorizationEndpoint !== "string" ||
+    authorizationEndpoint.length === 0
+  ) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "buildPostParAuthorizationUrl: authorizationEndpoint is required",
+    );
+  }
+  if (typeof clientId !== "string" || clientId.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "buildPostParAuthorizationUrl: clientId is required",
+    );
+  }
+  if (typeof requestUri !== "string" || requestUri.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "buildPostParAuthorizationUrl: requestUri is required",
+    );
+  }
+  const url = new URL(authorizationEndpoint);
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("request_uri", requestUri);
+  return url.toString();
+}
+
+// ---------------------------------------------------------------------------
+// Pushed Authorization Requests (RFC 9126)
+// ---------------------------------------------------------------------------
+
+export interface PushAuthorizationRequestOptions {
+  /** AS's `pushed_authorization_request_endpoint` from its metadata. */
+  parEndpoint: string;
+  /** Every authorization parameter, exactly as it would have appeared on
+   * the auth URL. PAR is a transport substitution, not a content change. */
+  params: Readonly<Record<string, string>>;
+  /** Optional fetcher override. */
+  fetcher?: Fetcher;
+}
+
+export interface PushAuthorizationRequestResult {
+  /** The opaque URN the AS bound our parameters to. The wallet redirects
+   * the user with this in `?request_uri=` per RFC 9126 §4. */
+  requestUri: string;
+  /** AS's recommended freshness window for `request_uri`. RFC 9126 §2.2
+   * RECOMMENDS but doesn't require it. */
+  expiresIn?: number;
+}
+
+/**
+ * Push authorization parameters to the AS's PAR endpoint per RFC 9126.
+ *
+ * The AS validates the parameters, mints a `request_uri` URN bound to
+ * them, and returns it. The wallet then redirects the user to the
+ * authorization endpoint with just `client_id` + `request_uri`.
+ *
+ * Why this exists: the EU dev issuer's `wallet-dev` client requires PAR
+ * (per-client policy). Without it, the EU AS rejects with
+ * "Pushed Authorization Request is only allowed".
+ */
+export async function pushAuthorizationRequest(
+  options: PushAuthorizationRequestOptions,
+): Promise<PushAuthorizationRequestResult> {
+  if (typeof options.parEndpoint !== "string" || options.parEndpoint.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "pushAuthorizationRequest: parEndpoint is required",
+    );
+  }
+  if (
+    options.params === null ||
+    typeof options.params !== "object" ||
+    typeof options.params["client_id"] !== "string" ||
+    options.params["client_id"].length === 0
+  ) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "pushAuthorizationRequest: params.client_id is required",
+    );
+  }
+
+  const body = new URLSearchParams();
+  for (const [k, v] of Object.entries(options.params)) {
+    body.set(k, v);
+  }
+
+  const fetcher = options.fetcher ?? defaultFetcher;
+  let response: Awaited<ReturnType<Fetcher>>;
+  try {
+    response = await fetcher(options.parEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: body.toString(),
+    });
+  } catch (err) {
+    throw new Oid4vciError(
+      "oid4vci.par_request_failed",
+      `PAR request failed: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+  if (!response.ok) {
+    let detail = "";
+    try {
+      detail = await response.text();
+    } catch {
+      detail = "<no body>";
+    }
+    throw new Oid4vciError(
+      "oid4vci.par_request_failed",
+      `PAR endpoint returned HTTP ${response.status}: ${detail.slice(0, 500)}`,
+    );
+  }
+
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch (err) {
+    throw new Oid4vciError(
+      "oid4vci.par_response_invalid",
+      `PAR response is not valid JSON: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+  if (json === null || typeof json !== "object" || Array.isArray(json)) {
+    throw new Oid4vciError(
+      "oid4vci.par_response_invalid",
+      "PAR response must be a JSON object",
+    );
+  }
+  const obj = json as Record<string, unknown>;
+  if (typeof obj["request_uri"] !== "string" || obj["request_uri"].length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.par_response_invalid",
+      "PAR response missing request_uri",
+    );
+  }
+  const result: PushAuthorizationRequestResult = {
+    requestUri: obj["request_uri"],
+  };
+  if (typeof obj["expires_in"] === "number") {
+    result.expiresIn = obj["expires_in"];
+  }
+  return result;
 }
 
 export interface RequestTokenAuthCodeOptions {

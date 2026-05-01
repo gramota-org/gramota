@@ -127,6 +127,13 @@ export interface AuthorizationServerMetadata {
   issuer: string;
   authorization_endpoint: string;
   token_endpoint: string;
+  /** RFC 9126 — when present, the wallet must POST auth params here to
+   * receive a `request_uri`, then redirect with just client_id+request_uri.
+   * Some clients (notably the EU's `wallet-dev`) require PAR per-client
+   * even when the AS-wide policy doesn't enforce it. */
+  pushed_authorization_request_endpoint?: string;
+  /** RFC 9126 — when true, the AS rejects auth requests not pushed via PAR. */
+  require_pushed_authorization_requests?: boolean;
   /** RFC 7636 — must include "S256" for our PKCE-only flow to work. */
   code_challenge_methods_supported?: readonly string[];
   /** Useful for diagnostics — should include "authorization_code". */
@@ -155,16 +162,31 @@ export async function fetchAuthorizationServerMetadata(
   const fetcher = options.fetcher ?? defaultFetcher;
 
   // Case 1: issuer is its own AS (test/dev mocks, simple issuers).
-  const directAuthz = (issuerMetadata as Record<string, unknown>)[
-    "authorization_endpoint"
-  ];
+  const issuerObj = issuerMetadata as Record<string, unknown>;
+  const directAuthz = issuerObj["authorization_endpoint"];
   const directToken = issuerMetadata.token_endpoint;
   if (typeof directAuthz === "string" && typeof directToken === "string") {
-    return {
+    const result: AuthorizationServerMetadata = {
       issuer: issuerMetadata.credential_issuer,
       authorization_endpoint: directAuthz,
       token_endpoint: directToken,
     };
+    // Self-hosting issuers may also expose PAR — propagate it.
+    if (
+      typeof issuerObj["pushed_authorization_request_endpoint"] === "string"
+    ) {
+      result.pushed_authorization_request_endpoint = issuerObj[
+        "pushed_authorization_request_endpoint"
+      ] as string;
+    }
+    if (
+      typeof issuerObj["require_pushed_authorization_requests"] === "boolean"
+    ) {
+      result.require_pushed_authorization_requests = issuerObj[
+        "require_pushed_authorization_requests"
+      ] as boolean;
+    }
+    return result;
   }
 
   // Case 2: delegated AS (production EU dev issuer, EUDIW reference impl).
@@ -199,6 +221,18 @@ export async function fetchAuthorizationServerMetadata(
           issuer: typeof body["issuer"] === "string" ? body["issuer"] : asUrl,
           authorization_endpoint: authzEndpoint,
           token_endpoint: tokenEndpoint,
+          ...(typeof body["pushed_authorization_request_endpoint"] === "string"
+            ? {
+                pushed_authorization_request_endpoint:
+                  body["pushed_authorization_request_endpoint"] as string,
+              }
+            : {}),
+          ...(typeof body["require_pushed_authorization_requests"] === "boolean"
+            ? {
+                require_pushed_authorization_requests:
+                  body["require_pushed_authorization_requests"] as boolean,
+              }
+            : {}),
           ...(Array.isArray(body["code_challenge_methods_supported"])
             ? {
                 code_challenge_methods_supported:

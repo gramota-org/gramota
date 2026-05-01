@@ -138,7 +138,31 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
     expect(asMetadata.grant_types_supported).toContain("authorization_code");
   }, 20_000);
 
-  it("Oid4vciClient.authorize() builds a URL pointing at the EU AS with all PKCE+state params", async () => {
+  it("EU AS metadata advertises the RFC 9126 PAR endpoint", async () => {
+    const issuerMetadata = await fetchIssuerMetadata(ISSUER_BACKEND);
+    const asMetadata =
+      await fetchAuthorizationServerMetadata(issuerMetadata);
+    expect(typeof asMetadata.pushed_authorization_request_endpoint).toBe(
+      "string",
+    );
+    expect(asMetadata.pushed_authorization_request_endpoint!).toMatch(
+      /^https:\/\//,
+    );
+  }, 20_000);
+
+  it("Oid4vciClient.authorize() pushes a PAR request to the EU AS and gets back a request_uri (full live PAR roundtrip)", async () => {
+    // What this proves end-to-end against live EU infrastructure:
+    //   1. We resolve issuer metadata
+    //   2. We follow §11.2.2 delegation to the AS (Keycloak realm)
+    //   3. We discover the PAR endpoint
+    //   4. We POST our authorization parameters to it
+    //   5. The EU AS validates them (client_id + redirect_uri + PKCE +
+    //      authorization_details), mints a request_uri URN, returns it
+    //   6. We build the post-PAR redirect URL using that URN
+    //
+    // This was previously blocked: the EU `wallet-dev` client requires PAR
+    // per-client policy. Without PAR our auth requests bounced with
+    // "Pushed Authorization Request is only allowed".
     const holderKey = await makeKey();
     const client = new Oid4vciClient({
       holderPublicKey: holderKey.pub,
@@ -146,72 +170,45 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
       alg: "ES256",
     });
 
-    // Pick a real config id from the live metadata.
     const issuerMetadata = await fetchIssuerMetadata(ISSUER_BACKEND);
     const sdJwtConfigId = Object.entries(
       issuerMetadata.credential_configurations_supported,
     ).find(
       ([, c]) => c.format === "vc+sd-jwt" || c.format === "dc+sd-jwt",
-    )?.[0];
-    expect(sdJwtConfigId).toBeDefined();
+    )?.[0]!;
 
-    // Synthetic offer pointing at the live EU issuer with auth_code grant.
-    // (The EU's web UI normally generates this — we construct it locally
-    // since the credential_offer URL isn't an API we can hit.)
-    const synthetic = offerUrl({
-      credential_issuer: ISSUER_BACKEND,
-      credential_configuration_ids: [sdJwtConfigId!],
-      grants: { [AUTHORIZATION_CODE_GRANT]: {} },
-    });
+    const start = await client.authorize(
+      offerUrl({
+        credential_issuer: ISSUER_BACKEND,
+        credential_configuration_ids: [sdJwtConfigId],
+        grants: { [AUTHORIZATION_CODE_GRANT]: {} },
+      }),
+      {
+        // Public, registered EU dev client. Documented in
+        // eudi-srv-pid-issuer realm export + eudi-lib-jvm-openid4vci-kt.
+        clientId: "wallet-dev",
+        // OOB redirect — one of the four whitelisted values for wallet-dev.
+        redirectUri: "urn:ietf:wg:oauth:2.0:oob",
+      },
+    );
 
-    const start = await client.authorize(synthetic, {
-      clientId: "wallet-dev",
-      redirectUri: "https://wallet.example.com/cb",
-    });
-
-    // The authorization URL must point at the EU's Keycloak realm — proves
-    // we followed §11.2.2 delegation correctly.
+    // Post-PAR URL has only client_id + request_uri.
     const u = new URL(start.authorizationUrl);
     expect(u.origin).toBe("https://dev.authenticate.eudiw.dev");
     expect(u.pathname).toContain("/protocol/openid-connect/auth");
-
-    // Required OAuth + PKCE params must all be present.
-    expect(u.searchParams.get("response_type")).toBe("code");
     expect(u.searchParams.get("client_id")).toBe("wallet-dev");
-    expect(u.searchParams.get("redirect_uri")).toBe(
-      "https://wallet.example.com/cb",
+    expect(u.searchParams.get("request_uri")).toMatch(
+      /^urn:ietf:params:oauth:request_uri:/,
     );
-    expect(u.searchParams.get("state")?.length ?? 0).toBeGreaterThan(0);
-    expect(u.searchParams.get("code_challenge")?.length).toBe(43);
-    expect(u.searchParams.get("code_challenge_method")).toBe("S256");
-
-    // OID4VCI §5.1.2 — credential to request.
-    const ad = JSON.parse(
-      u.searchParams.get("authorization_details") ?? "[]",
-    );
-    expect(Array.isArray(ad)).toBe(true);
-    expect(ad[0]?.type).toBe("openid_credential");
-    expect(ad[0]?.credential_configuration_id).toBe(sdJwtConfigId);
-
-    // The Holder must keep these to complete the flow.
-    expect(start.codeVerifier.length).toBeGreaterThanOrEqual(43);
-    expect(start.state.length).toBeGreaterThan(0);
+    // No PKCE/redirect_uri/state on the post-PAR URL — that's the whole point.
+    expect(u.searchParams.get("code_challenge")).toBeNull();
+    expect(u.searchParams.get("redirect_uri")).toBeNull();
   }, 20_000);
 
-  it("the EU AS parses our URL successfully (rejects only at the registration step, not at the OAuth-syntax step)", async () => {
-    // What this proves: our authorization URL is well-formed enough that
-    // the EU's Keycloak realm accepts every OAuth + PKCE parameter we sent,
-    // and the only reason it bounces is registration (the wallet's
-    // `client_id` + `redirect_uri` aren't registered with the EU AS).
-    //
-    // That's a meaningful interop signal: protocol-level malformedness
-    // would surface as a generic "invalid_request" — instead we get a
-    // registration-specific rejection, which means our URL passed the
-    // OAuth/PKCE wire-format gate.
-    //
-    // To actually authenticate against the EU AS, the wallet operator
-    // must register the `client_id` + redirect URI with the realm. That's
-    // an out-of-band ops step not part of this SDK's scope.
+  it("the EU AS accepts our PAR-built authorization URL (302 to login, NOT a 4xx)", async () => {
+    // The previous canary asserted "rejects only at registration step".
+    // Now with PAR + correct OOB redirect, we expect the EU AS to fully
+    // accept our auth request and redirect us to the Keycloak login page.
     const holderKey = await makeKey();
     const client = new Oid4vciClient({
       holderPublicKey: holderKey.pub,
@@ -234,7 +231,7 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
       }),
       {
         clientId: "wallet-dev",
-        redirectUri: "https://wallet.example.com/cb",
+        redirectUri: "urn:ietf:wg:oauth:2.0:oob",
       },
     );
 
@@ -244,18 +241,20 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
       headers: { Accept: "text/html" },
     });
 
-    // We expect Keycloak's HTML error page — not a 5xx (server error) and
-    // not 200 (which only happens with a registered client). The body must
-    // mention `redirect_uri` or `client` — proving Keycloak got past every
-    // OAuth-protocol validation before failing on registration.
-    expect(response.status).toBeLessThan(500);
-    const body = await response.text();
-    expect(body.toLowerCase()).toMatch(/redirect_uri|client/);
-    // The error must NOT be a generic protocol failure (e.g.
-    // "invalid_request", "unsupported_response_type", "invalid_pkce") —
-    // those would mean our URL is malformed.
-    expect(body.toLowerCase()).not.toMatch(/invalid_request\b/);
-    expect(body.toLowerCase()).not.toMatch(/unsupported_response_type/);
-    expect(body.toLowerCase()).not.toMatch(/code_challenge.*invalid/);
+    // 200 (HTML login page rendered) OR 302 (redirect to login) — both
+    // mean the AS fully accepted our request. The previous "Invalid
+    // parameter: redirect_uri" 400 must NOT appear.
+    expect(response.status).toBeLessThan(400);
+    if (response.status >= 300) {
+      // 302 → login URL is somewhere in the AS realm.
+      const location = response.headers.get("location") ?? "";
+      expect(location).toContain("authenticate.eudiw.dev");
+    }
+
+    // Honest documented gap: the next leg requires a human to authenticate
+    // at Keycloak with `tneal` / `password` (documented test creds), then
+    // consent, then the AS displays the auth code on an OOB page. That's
+    // out of scope for this headless test — but the demo CLI runner can
+    // automate the Keycloak login programmatically.
   }, 20_000);
 });

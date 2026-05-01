@@ -51,14 +51,26 @@ export {
 
 export {
   AUTHORIZATION_CODE_GRANT,
+  buildAuthorizationParams,
   buildAuthorizationUrl,
+  buildPostParAuthorizationUrl,
   parseAuthCallback,
+  pushAuthorizationRequest,
   requestTokenAuthCode,
   type BuildAuthorizationUrlOptions,
   type BuiltAuthorizationUrl,
   type ParsedAuthCallback,
+  type PushAuthorizationRequestOptions,
+  type PushAuthorizationRequestResult,
   type RequestTokenAuthCodeOptions,
 } from "./auth-code.js";
+
+export {
+  DirectAuthorizationTransport,
+  ParAuthorizationTransport,
+  type AuthorizationTransport,
+  type DeliverInput,
+} from "./transport.js";
 
 export {
   codeChallenge,

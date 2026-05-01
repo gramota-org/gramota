@@ -2,8 +2,7 @@ import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
 import type { TrustResolver } from "@gateway/trust";
 import type {
   CredentialStatusResult,
-  Fetcher as StatusListFetcher,
-  StatusList,
+  StatusResolver,
 } from "@gateway/status-list";
 
 /** Configuration for a Verifier instance. */
@@ -20,6 +19,18 @@ export interface VerifierConfig {
    * keys, `JwksUrlTrustResolver` for runtime JWKS fetching, or any custom
    * implementation of the `TrustResolver` interface. */
   trust?: TrustResolver;
+
+  /**
+   * Pluggable revocation/suspension resolution (Strategy pattern).
+   *
+   * When set, the verifier runs a 10th security check ("status.check")
+   * after all crypto checks pass. Default: omitted — no status check.
+   *
+   * Use `StatusListResolver` for IETF Token Status List (the typical EU
+   * choice). Custom resolvers (CRL, OCSP, EU Trusted Issuers Registry,
+   * deny-lists) implement the `StatusResolver` interface and plug in here.
+   */
+  statusResolver?: StatusResolver;
 
   /** JWS algorithm allowlist for both issuer and KB-JWT signatures.
    * Default: every IETF asymmetric algorithm we support.
@@ -45,30 +56,17 @@ export interface VerifyOptions {
   now?: () => number;
 
   /**
-   * IETF Token Status List revocation/suspension check.
+   * Status-check policy for THIS verification.
    *
-   * - Omit to skip (verifier doesn't fetch any status list).
-   * - Pass an object to enable. The credential's status reference is
-   *   resolved, the list is fetched + signature-verified, and the result
-   *   surfaces in `result.status` and `result.checks`.
+   * - When `false`/omitted, the configured `statusResolver` (if any)
+   *   is still consulted; "skipped" is acceptable.
+   * - When `true`, a credential with no resolvable status fails the
+   *   "status.check" gate. Useful for high-assurance flows where
+   *   non-revocable credentials are unacceptable.
    *
-   * Set `required: true` to fail when the credential has no status
-   * reference (some issuers will only opt-in for revocable credentials).
+   * Has no effect when no `statusResolver` is configured on the Verifier.
    */
-  status?: StatusCheckOptions;
-}
-
-/** Options for the optional `verifier.verify(..., { status: ... })` step. */
-export interface StatusCheckOptions {
-  /** Trusted JWKs the status-list signature must verify against. */
-  trustedIssuers: readonly JsonWebKey[];
-  /** When true, credentials without a `status` claim fail verification.
-   * When false/omitted, missing status is treated as "skipped". */
-  required?: boolean;
-  /** Override fetch — for tests. */
-  fetcher?: StatusListFetcher;
-  /** A pre-fetched/cached status list — skip the network when provided. */
-  list?: StatusList;
+  requireStatus?: boolean;
 }
 
 /** A single security check, recorded for observability. Every check is

@@ -24,10 +24,9 @@ import {
   type AuthorizationRequest,
   type AuthorizationResponse,
 } from "@gateway/oid4vp";
-import {
-  StatusListError,
-  checkCredentialStatus,
-  type CredentialStatusResult,
+import type {
+  CredentialStatusResult,
+  StatusResolver,
 } from "@gateway/status-list";
 import {
   VerificationError,
@@ -46,6 +45,7 @@ const DEFAULT_CLOCK_SKEW_S = 30;
 export class Verifier {
   private readonly audience: string;
   private readonly trust: TrustResolver;
+  private readonly statusResolver: StatusResolver | undefined;
   private readonly algorithms: readonly SupportedAlg[] | undefined;
   private readonly maxKbJwtAgeSeconds: number;
   private readonly maxClockSkewSeconds: number;
@@ -76,6 +76,7 @@ export class Verifier {
     this.trust = hasTrust
       ? (config.trust as TrustResolver)
       : new StaticTrustResolver([config.issuerKey as JsonWebKey]);
+    this.statusResolver = config.statusResolver;
     this.algorithms = config.algorithms;
     this.maxKbJwtAgeSeconds =
       config.maxKbJwtAgeSeconds ?? DEFAULT_MAX_AGE_S;
@@ -223,53 +224,45 @@ export class Verifier {
       );
     }
 
-    // 10. Optional status check (IETF Token Status List).
+    // 10. Optional status check — delegated to the configured StatusResolver
+    // Strategy. The verifier knows POLICY (requireStatus); the resolver
+    // knows MECHANISM (status list, CRL, OCSP, ...).
     let statusResult: CredentialStatusResult | "skipped" | undefined;
-    if (options.status !== undefined) {
-      const checkOpts: Parameters<typeof checkCredentialStatus>[1] = {
-        trustedIssuers: options.status.trustedIssuers,
-      };
-      if (options.status.fetcher !== undefined) {
-        checkOpts.fetcher = options.status.fetcher;
-      }
-      if (options.status.list !== undefined) {
-        checkOpts.list = options.status.list;
-      }
-      if (options.now !== undefined) checkOpts.now = options.now;
+    if (this.statusResolver !== undefined) {
+      const resolveOpts: Parameters<StatusResolver["resolveStatus"]>[1] = {};
+      if (options.now !== undefined) resolveOpts.now = options.now;
 
       try {
-        statusResult = await checkCredentialStatus(parsed, checkOpts);
-        if (statusResult.state !== "valid") {
+        statusResult = await this.statusResolver.resolveStatus(
+          parsed,
+          resolveOpts,
+        );
+      } catch (err) {
+        return makeFailure(checks, "status.check", describe(err));
+      }
+
+      if (statusResult === "skipped") {
+        if (options.requireStatus) {
           return makeFailure(
             checks,
             "status.check",
-            `credential status is '${statusResult.state}' (code=${statusResult.code})`,
+            "credential has no resolvable status but requireStatus=true",
           );
         }
+        record(
+          checks,
+          "status.check",
+          true,
+          "credential status was skipped (no reference resolved)",
+        );
+      } else if (statusResult.state !== "valid") {
+        return makeFailure(
+          checks,
+          "status.check",
+          `credential status is '${statusResult.state}' (code=${statusResult.code})`,
+        );
+      } else {
         record(checks, "status.check", true);
-      } catch (err) {
-        // Distinguish "no status claim" from any other failure.
-        if (
-          err instanceof StatusListError &&
-          err.code === "status_list.no_status_reference"
-        ) {
-          if (options.status.required) {
-            return makeFailure(
-              checks,
-              "status.check",
-              "credential has no status reference but options.status.required = true",
-            );
-          }
-          statusResult = "skipped";
-          record(
-            checks,
-            "status.check",
-            true,
-            "credential has no status reference (issuer didn't opt in)",
-          );
-        } else {
-          return makeFailure(checks, "status.check", describe(err));
-        }
       }
     }
 
@@ -403,7 +396,9 @@ export class Verifier {
 
     const verifyOpts: VerifyOptions = { nonce: options.expectedNonce };
     if (options.now !== undefined) verifyOpts.now = options.now;
-    if (options.status !== undefined) verifyOpts.status = options.status;
+    if (options.requireStatus !== undefined) {
+      verifyOpts.requireStatus = options.requireStatus;
+    }
     const baseResult = await this.verify<TClaims>(vpToken, verifyOpts);
 
     return Object.assign({}, baseResult, {
@@ -460,8 +455,10 @@ export interface VerifyResponseOptions {
   expectedState?: string;
   /** Override "now" — for tests. */
   now?: () => number;
-  /** Forwarded to `verify()` — opt-in IETF Token Status List check. */
-  status?: VerifyOptions["status"];
+  /** Forwarded to `verify()` — fail when credential has no resolvable
+   * status. Has effect only when the Verifier was constructed with a
+   * `statusResolver`. */
+  requireStatus?: boolean;
 }
 
 /** Standalone one-off verification — same semantics as Verifier.verify, but

@@ -38,6 +38,7 @@ const VCT = "https://credentials.example.com/pid";
 const AUTHZ_ENDPOINT = `${ISSUER}/authorize`;
 const TOKEN_ENDPOINT = `${ISSUER}/token`;
 const CRED_ENDPOINT = `${ISSUER}/credential`;
+const PAR_ENDPOINT = `${ISSUER}/par`;
 
 async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {
   const { publicKey, privateKey } = await generateKeyPair("ES256", {
@@ -69,6 +70,12 @@ interface MockIssuerOptions {
 function buildMockIssuer(opts: MockIssuerOptions): Fetcher {
   const accessToken = opts.accessToken ?? "mock-access-token";
   const cNonce = opts.cNonce ?? "mock-c-nonce";
+  // Server-side state: the AS binds the pushed params to a request_uri URN;
+  // we don't actually need to validate them again at the auth endpoint
+  // because in real life Keycloak enforces it. For tests, the existence of
+  // a PAR roundtrip is the contract — token-endpoint validation continues
+  // to enforce PKCE + redirect_uri.
+  const issuedRequestUris = new Set<string>();
 
   return async (url, init) => {
     const method = init?.method ?? "GET";
@@ -83,6 +90,8 @@ function buildMockIssuer(opts: MockIssuerOptions): Fetcher {
         credential_endpoint: CRED_ENDPOINT,
         token_endpoint: TOKEN_ENDPOINT,
         authorization_endpoint: AUTHZ_ENDPOINT,
+        // RFC 9126 — PAR is mandatory in this SDK.
+        pushed_authorization_request_endpoint: PAR_ENDPOINT,
         credential_configurations_supported: {
           [opts.expectedCredentialConfigurationId]: {
             format: "vc+sd-jwt",
@@ -98,6 +107,40 @@ function buildMockIssuer(opts: MockIssuerOptions): Fetcher {
       return {
         ok: true,
         status: 200,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      };
+    }
+
+    // 1b. PAR endpoint — RFC 9126 §2.1
+    if (method === "POST" && url === PAR_ENDPOINT) {
+      const params = new URLSearchParams(init!.body as string);
+      // Validate the same things the AS would: client_id, redirect_uri,
+      // PKCE, response_type. PKCE-verifier-vs-challenge is checked at
+      // the token endpoint, but the challenge presence is a PAR concern.
+      if (params.get("client_id") !== opts.expectedClientId) {
+        return errorResponse(400, "client_id_mismatch");
+      }
+      if (params.get("redirect_uri") !== opts.expectedRedirectUri) {
+        return errorResponse(400, "redirect_uri_mismatch");
+      }
+      if (params.get("code_challenge") !== opts.expectedCodeChallenge) {
+        return errorResponse(400, "code_challenge_mismatch");
+      }
+      if (params.get("code_challenge_method") !== "S256") {
+        return errorResponse(400, "unsupported_code_challenge_method");
+      }
+      if (params.get("response_type") !== "code") {
+        return errorResponse(400, "unsupported_response_type");
+      }
+      const requestUri = `urn:ietf:params:oauth:request_uri:test-${
+        issuedRequestUris.size
+      }-${Math.random().toString(36).slice(2, 10)}`;
+      issuedRequestUris.add(requestUri);
+      const body = { request_uri: requestUri, expires_in: 60 };
+      return {
+        ok: true,
+        status: 201,
         json: async () => body,
         text: async () => JSON.stringify(body),
       };
@@ -275,21 +318,17 @@ describe("Oid4vciClient — auth-code flow", () => {
       },
     );
 
-    // The URL must point at the issuer's authorization endpoint with the
-    // expected query parameters (PKCE challenge, state, authorization_details).
+    // Post-PAR URL: only client_id + request_uri. All other params got
+    // pushed to the AS via the PAR endpoint and bound to the URN.
     const u = new URL(start.authorizationUrl);
     expect(`${u.origin}${u.pathname}`).toBe(AUTHZ_ENDPOINT);
-    expect(u.searchParams.get("response_type")).toBe("code");
     expect(u.searchParams.get("client_id")).toBe(CLIENT_ID);
-    expect(u.searchParams.get("redirect_uri")).toBe(REDIRECT_URI);
-    expect(u.searchParams.get("state")).toBe(state);
-    expect(u.searchParams.get("code_challenge")).toBe(expectedChallenge);
-    expect(u.searchParams.get("code_challenge_method")).toBe("S256");
-    const ad = JSON.parse(u.searchParams.get("authorization_details")!);
-    expect(ad).toEqual([
-      { type: "openid_credential", credential_configuration_id: CONFIG_ID },
-    ]);
-    expect(u.searchParams.get("issuer_state")).toBe("iss-st-1");
+    expect(u.searchParams.get("request_uri")).toMatch(
+      /^urn:ietf:params:oauth:request_uri:/,
+    );
+    expect(u.searchParams.get("code_challenge")).toBeNull();
+    expect(u.searchParams.get("redirect_uri")).toBeNull();
+    expect(u.searchParams.get("state")).toBeNull();
 
     expect(start.codeVerifier).toBe(codeVerifier);
     expect(start.state).toBe(state);

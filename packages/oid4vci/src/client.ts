@@ -1,4 +1,14 @@
-import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
+import {
+  asSigner,
+  type JsonWebKey,
+  type Signer,
+  type SupportedAlg,
+} from "@gateway/jose";
+import {
+  CredentialFormatError,
+  CredentialFormatRegistry,
+  createDefaultCredentialFormatRegistry,
+} from "@gateway/credential-format";
 import {
   parseCredentialOffer,
   preAuthorizedCodeFrom,
@@ -15,26 +25,74 @@ import { buildProofJwt } from "./proof.js";
 import { requestToken } from "./token.js";
 import { requestCredential } from "./credential.js";
 import {
-  buildAuthorizationUrl,
+  buildAuthorizationParams,
   parseAuthCallback,
   requestTokenAuthCode,
 } from "./auth-code.js";
+import {
+  ParAuthorizationTransport,
+  type AuthorizationTransport,
+} from "./transport.js";
 import {
   Oid4vciError,
   type CredentialOffer,
   type IssuerMetadata,
 } from "./types.js";
 
-export interface Oid4vciClientConfig {
-  /** Holder's public JWK (embedded in the proof JWT header `jwk`). */
-  holderPublicKey: JsonWebKey;
-  /** Holder's private JWK (used to sign the proof). */
-  holderPrivateKey: JsonWebKey;
-  /** JWS algorithm matching the holder's key. */
-  alg: SupportedAlg;
+/**
+ * Two equivalent ways to give the client signing capability:
+ *
+ *   - Raw form:  { holderPublicKey, holderPrivateKey, alg } — shorthand
+ *     for tests/dev. Internally normalized to a {@link JwkSigner}.
+ *   - Signer form: { signer: Signer } — for production wallets where
+ *     the private key lives in WebAuthn / iOS Secure Enclave / HSM /
+ *     KMS and is never materialized in JS heap.
+ *
+ * Pass exactly one shape. Mixing both is a programmer error.
+ */
+export type Oid4vciClientSignerInput =
+  | {
+      /** Holder's public JWK (embedded in the proof JWT header `jwk`). */
+      holderPublicKey: JsonWebKey;
+      /** Holder's private JWK (used to sign the proof). */
+      holderPrivateKey: JsonWebKey;
+      /** JWS algorithm matching the holder's key. */
+      alg: SupportedAlg;
+    }
+  | {
+      /** A Signer Strategy — production-grade alternative to raw keys. */
+      signer: Signer;
+    };
+
+export type Oid4vciClientConfig = Oid4vciClientSignerInput & {
   /** Override fetch — for tests. */
   fetcher?: Fetcher;
-}
+  /**
+   * How authorization parameters reach the AS during `authorize()`.
+   * Default: {@link ParAuthorizationTransport} (RFC 9126 PAR).
+   *
+   * Pass a different strategy to opt into another transport — e.g.
+   * `new DirectAuthorizationTransport()` for classic-OAuth issuers
+   * that don't support PAR. Custom transports (e.g. JAR/RFC 9101)
+   * implement {@link AuthorizationTransport} and plug in here.
+   *
+   * Strategy pattern: this is the abstraction `authorize()` depends
+   * on, so adding a new transport doesn't require touching the
+   * orchestrator (Open/Closed Principle).
+   */
+  authorizationTransport?: AuthorizationTransport;
+  /**
+   * Pluggable credential-format registry.
+   *
+   * `acceptOffer()` and `authorize()` consult this registry to gate
+   * which formats they're willing to drive — instead of hardcoding
+   * `if format === "vc+sd-jwt"`. Add an `MDocFormatHandler` to the
+   * registry and the client suddenly handles mDoc credentials.
+   *
+   * Default: a registry with `SdJwtVcFormatHandler` pre-registered.
+   */
+  credentialFormats?: CredentialFormatRegistry;
+};
 
 export interface AcceptOfferOptions {
   /** Transaction code (PIN) — supplied when the offer's tx_code requires it. */
@@ -70,26 +128,28 @@ export interface AcceptOfferResult {
  *   5. requestCredential(metadata, accessToken, proof) → credential string
  */
 export class Oid4vciClient {
-  constructor(private readonly config: Oid4vciClientConfig) {
-    if (
-      config.holderPublicKey === null ||
-      typeof config.holderPublicKey !== "object"
-    ) {
-      throw new TypeError(
-        "Oid4vciClient: holderPublicKey is required",
-      );
-    }
-    if (
-      config.holderPrivateKey === null ||
-      typeof config.holderPrivateKey !== "object"
-    ) {
-      throw new TypeError(
-        "Oid4vciClient: holderPrivateKey is required",
-      );
-    }
-    if (typeof config.alg !== "string" || config.alg.length === 0) {
-      throw new TypeError("Oid4vciClient: alg is required");
-    }
+  /** The authorization-transport Strategy. Defaults to PAR; override via
+   * `Oid4vciClientConfig.authorizationTransport` for non-PAR issuers
+   * or to inject custom transports (e.g. JAR/RFC 9101). */
+  private readonly authorizationTransport: AuthorizationTransport;
+  /** Registry the client consults to decide which credential formats it
+   * will drive. Defaults to a registry with SdJwtVcFormatHandler. */
+  private readonly credentialFormats: CredentialFormatRegistry;
+  /** The Signer the client uses for proof JWTs. Either supplied
+   * directly via `config.signer` (production wallets with HSM/WebAuthn)
+   * or built from raw `{ holderPublicKey, holderPrivateKey, alg }` keys
+   * via {@link asSigner} (tests, dev). */
+  private readonly signer: Signer;
+  /** Captured fetcher override for ergonomics. */
+  private readonly defaultFetcher: Fetcher | undefined;
+
+  constructor(config: Oid4vciClientConfig) {
+    this.signer = normalizeSignerInput(config);
+    this.authorizationTransport =
+      config.authorizationTransport ?? new ParAuthorizationTransport();
+    this.credentialFormats =
+      config.credentialFormats ?? createDefaultCredentialFormatRegistry();
+    this.defaultFetcher = config.fetcher;
   }
 
   /** Pure: parse a credential offer URL without any network I/O. */
@@ -122,7 +182,7 @@ export class Oid4vciClient {
       );
     }
 
-    const fetcher = options.fetcher ?? this.config.fetcher;
+    const fetcher = options.fetcher ?? this.defaultFetcher;
     const metadata = await fetchIssuerMetadata(offer.credential_issuer, {
       ...(fetcher !== undefined ? { fetcher } : {}),
     });
@@ -144,13 +204,10 @@ export class Oid4vciClient {
       );
     }
 
-    // We only handle vc+sd-jwt in v1.
-    if (config.format !== "vc+sd-jwt" && config.format !== "dc+sd-jwt") {
-      throw new Oid4vciError(
-        "oid4vci.unsupported_format",
-        `credential format '${config.format}' is not supported (v1 supports vc+sd-jwt only)`,
-      );
-    }
+    // Consult the format registry — the client drives whatever the
+    // registry has handlers for. Default registry knows SD-JWT-VC; add
+    // an MDocFormatHandler to drive mDoc credentials too.
+    const formatHandler = this.requireIssuanceHandler(config.format);
 
     // Token request
     const tokenEndpoint = resolveTokenEndpoint(metadata);
@@ -162,12 +219,10 @@ export class Oid4vciClient {
     if (fetcher !== undefined) tokenOpts.fetcher = fetcher;
     const tokenResponse = await requestToken(tokenOpts);
 
-    // Build proof
+    // Build proof — delegates the actual signing to the configured Signer.
     const proofOpts: Parameters<typeof buildProofJwt>[0] = {
       audience: metadata.credential_issuer,
-      publicKey: this.config.holderPublicKey,
-      privateKey: this.config.holderPrivateKey,
-      alg: this.config.alg,
+      signer: this.signer,
     };
     if (tokenResponse.c_nonce !== undefined) {
       proofOpts.nonce = tokenResponse.c_nonce;
@@ -193,6 +248,20 @@ export class Oid4vciClient {
       throw new Oid4vciError(
         "oid4vci.credential_response_invalid",
         "issuer did not return a credential string",
+      );
+    }
+
+    // Format-specific issuance-token sanity check (e.g. SD-JWT-VC must
+    // contain `~`). The handler decides what "well-formed for this
+    // format" means.
+    try {
+      formatHandler.validateIssuanceToken(credential);
+    } catch (err) {
+      throw new Oid4vciError(
+        "oid4vci.credential_response_invalid",
+        `issuer returned a credential that doesn't validate as '${config.format}': ${
+          err instanceof Error ? err.message : String(err)
+        }`,
       );
     }
 
@@ -239,7 +308,7 @@ export class Oid4vciClient {
     }
 
     const offer = parseCredentialOffer(offerUrl);
-    const fetcher = options.fetcher ?? this.config.fetcher;
+    const fetcher = options.fetcher ?? this.defaultFetcher;
     const metadata = await fetchIssuerMetadata(offer.credential_issuer, {
       ...(fetcher !== undefined ? { fetcher } : {}),
     });
@@ -260,12 +329,8 @@ export class Oid4vciClient {
         `credential_configuration_id '${configId}' is not in issuer metadata`,
       );
     }
-    if (config.format !== "vc+sd-jwt" && config.format !== "dc+sd-jwt") {
-      throw new Oid4vciError(
-        "oid4vci.unsupported_format",
-        `credential format '${config.format}' is not supported (v1: vc+sd-jwt only)`,
-      );
-    }
+    // Registry gate (replaces hardcoded if-format).
+    this.requireIssuanceHandler(config.format);
 
     // OID4VCI §11.2.2: resolve the authorization server. The EU dev issuer
     // delegates to a Keycloak realm; the issuer's own URL has no /authorize.
@@ -277,7 +342,7 @@ export class Oid4vciClient {
     const issuerState =
       offer.grants?.["authorization_code"]?.issuer_state;
 
-    const buildOpts: Parameters<typeof buildAuthorizationUrl>[0] = {
+    const buildOpts: Parameters<typeof buildAuthorizationParams>[0] = {
       authorizationEndpoint: asMetadata.authorization_endpoint,
       clientId: options.clientId,
       redirectUri: options.redirectUri,
@@ -290,12 +355,24 @@ export class Oid4vciClient {
     if (options.scope !== undefined) buildOpts.scope = options.scope;
     if (issuerState !== undefined) buildOpts.issuerState = issuerState;
 
-    const built = buildAuthorizationUrl(buildOpts);
+    // Build canonical params + verifier + state, then hand off to the
+    // configured transport Strategy. The default is PAR (RFC 9126) but
+    // callers can inject DirectAuthorizationTransport, a custom JAR
+    // implementation, etc. — Open/Closed via Strategy pattern.
+    const { params, codeVerifier, state } = buildAuthorizationParams(buildOpts);
+    const deliverInput: Parameters<AuthorizationTransport["deliver"]>[0] = {
+      authorizationServerMetadata: asMetadata,
+      params,
+      clientId: options.clientId,
+    };
+    if (fetcher !== undefined) deliverInput.fetcher = fetcher;
+    const authorizationUrl =
+      await this.authorizationTransport.deliver(deliverInput);
 
     return {
-      authorizationUrl: built.authorizationUrl,
-      codeVerifier: built.codeVerifier,
-      state: built.state,
+      authorizationUrl,
+      codeVerifier,
+      state,
       offer,
       metadata,
       authorizationServerMetadata: asMetadata,
@@ -331,7 +408,7 @@ export class Oid4vciClient {
       );
     }
 
-    const fetcher = options.fetcher ?? this.config.fetcher;
+    const fetcher = options.fetcher ?? this.defaultFetcher;
     // Use the AS's token_endpoint — for delegated AS (EU/Keycloak), the
     // issuer doesn't host /token itself.
     const tokenEndpoint = options.authorizationServerMetadata.token_endpoint;
@@ -346,12 +423,10 @@ export class Oid4vciClient {
     if (fetcher !== undefined) tokenOpts.fetcher = fetcher;
     const tokenResponse = await requestTokenAuthCode(tokenOpts);
 
-    // Build proof JWT
+    // Build proof JWT — same Signer for the auth-code path.
     const proofOpts: Parameters<typeof buildProofJwt>[0] = {
       audience: options.metadata.credential_issuer,
-      publicKey: this.config.holderPublicKey,
-      privateKey: this.config.holderPrivateKey,
-      alg: this.config.alg,
+      signer: this.signer,
     };
     if (tokenResponse.c_nonce !== undefined) {
       proofOpts.nonce = tokenResponse.c_nonce;
@@ -380,6 +455,25 @@ export class Oid4vciClient {
       );
     }
 
+    // Format-specific issuance-token validation via the registry.
+    const claimedFormat =
+      options.metadata.credential_configurations_supported[
+        options.credentialConfigurationId
+      ]?.format;
+    if (typeof claimedFormat === "string") {
+      const handler = this.requireIssuanceHandler(claimedFormat);
+      try {
+        handler.validateIssuanceToken(credential);
+      } catch (err) {
+        throw new Oid4vciError(
+          "oid4vci.credential_response_invalid",
+          `issuer returned a credential that doesn't validate as '${claimedFormat}': ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      }
+    }
+
     return {
       credential,
       credentialConfigurationId: options.credentialConfigurationId,
@@ -387,6 +481,56 @@ export class Oid4vciClient {
       offer: options.offer,
     };
   }
+
+  /**
+   * Look up an issuance-capable handler in the registry. Translates
+   * the registry's CredentialFormatError into our Oid4vciError code
+   * surface so callers see one error vocabulary.
+   */
+  private requireIssuanceHandler(format: string) {
+    try {
+      return this.credentialFormats.requireIssuance(format);
+    } catch (err) {
+      if (err instanceof CredentialFormatError) {
+        throw new Oid4vciError("oid4vci.unsupported_format", err.message);
+      }
+      throw err;
+    }
+  }
+}
+
+/**
+ * Normalize the dual-input config (raw JWKs OR Signer) into a Signer.
+ * Throws TypeError if neither shape is satisfied.
+ */
+function normalizeSignerInput(config: Oid4vciClientSignerInput): Signer {
+  if (
+    "signer" in config &&
+    config.signer !== undefined &&
+    typeof (config.signer as Signer).sign === "function"
+  ) {
+    return config.signer;
+  }
+  if (
+    "holderPublicKey" in config &&
+    "holderPrivateKey" in config &&
+    "alg" in config &&
+    config.holderPublicKey !== null &&
+    typeof config.holderPublicKey === "object" &&
+    config.holderPrivateKey !== null &&
+    typeof config.holderPrivateKey === "object" &&
+    typeof config.alg === "string" &&
+    config.alg.length > 0
+  ) {
+    return asSigner({
+      publicKey: config.holderPublicKey,
+      privateKey: config.holderPrivateKey,
+      alg: config.alg,
+    });
+  }
+  throw new TypeError(
+    "Oid4vciClient: pass either { holderPublicKey, holderPrivateKey, alg } (raw shorthand) or { signer } (production)",
+  );
 }
 
 // ---------------------------------------------------------------------------

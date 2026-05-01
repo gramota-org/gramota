@@ -2,6 +2,7 @@ import {
   signJws,
   verifyJws,
   type JsonWebKey,
+  type Signer,
   type SupportedAlg,
 } from "@gateway/jose";
 import { computeSdHash } from "./sd-hash.js";
@@ -50,7 +51,22 @@ export class SdJwtKeyBindingError extends Error {
 // Builder (holder side)
 // ---------------------------------------------------------------------------
 
-export interface BuildKbJwtOptions {
+/** KB-JWT signing input — accepts either raw keys (shorthand for tests
+ * and dev) or a {@link Signer} (production wallets with HSM/WebAuthn/
+ * Secure Enclave backing). */
+export type KbJwtSignerInput =
+  | {
+      /** JWS algorithm matching the holder JWK's capabilities. */
+      alg: SupportedAlg;
+      /** Holder's PRIVATE JWK. Public part must equal `cnf.jwk`. */
+      privateKey: JsonWebKey;
+    }
+  | {
+      /** Holder's Signer Strategy. Public side must equal `cnf.jwk`. */
+      signer: Signer;
+    };
+
+export type BuildKbJwtOptions = {
   /** Verifier identifier — bound into KB-JWT to prevent cross-verifier replay. */
   aud: string;
   /** Verifier challenge — bound into KB-JWT to prevent within-verifier replay. */
@@ -60,11 +76,7 @@ export interface BuildKbJwtOptions {
   /** Hash algorithm for sd_hash. Default `sha-256`. Must equal the parent
    * SD-JWT's `_sd_alg` to be verifiable. */
   hashAlg?: HashAlg;
-  /** JWS algorithm matching the holder JWK's capabilities. */
-  alg: SupportedAlg;
-  /** Holder's PRIVATE JWK. Public part must equal `cnf.jwk` in the parent. */
-  privateKey: JsonWebKey;
-}
+} & KbJwtSignerInput;
 
 /**
  * Build and sign a Key Binding JWT for a given presentation prefix.
@@ -104,6 +116,23 @@ export async function buildKeyBindingJwt(
     sd_hash: sdHash,
   };
 
+  // Normalize input: Signer Strategy in production, raw JWK shorthand
+  // for tests/dev. Both paths produce a compact-serialized JWS with
+  // typ=kb+jwt — the wire format the verifier reads.
+  if ("signer" in options) {
+    const signer = options.signer;
+    const headerB64 = Buffer.from(
+      JSON.stringify({ alg: signer.alg, typ: "kb+jwt" }),
+      "utf-8",
+    ).toString("base64url");
+    const payloadB64 = Buffer.from(
+      JSON.stringify(payload),
+      "utf-8",
+    ).toString("base64url");
+    const signed = `${headerB64}.${payloadB64}`;
+    const signature = await signer.sign(signed);
+    return `${signed}.${signature}`;
+  }
   return await signJws(payload, options.privateKey, {
     alg: options.alg,
     typ: "kb+jwt",
