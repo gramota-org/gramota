@@ -14,7 +14,11 @@
     "test:watch": "vitest",
     "test:coverage": "pnpm -r build && vitest run --coverage",
     "typecheck": "pnpm -r build && pnpm -r typecheck",
-    "clean": "pnpm -r exec rm -rf dist coverage *.tsbuildinfo"
+    "clean": "pnpm -r exec rm -rf dist coverage *.tsbuildinfo",
+    "demo": "pnpm --filter @gateway/demo build && node packages/demo/dist/index.js",
+    "demo:self-loop": "pnpm --filter @gateway/demo build && node packages/demo/dist/index.js self-loop",
+    "demo:eu-pid": "pnpm --filter @gateway/demo build && node packages/demo/dist/index.js eu-pid",
+    "demo:list": "pnpm --filter @gateway/demo build && node packages/demo/dist/index.js list"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

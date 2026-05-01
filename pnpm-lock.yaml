@@ -33,6 +33,42 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@20.19.39)
 
+  packages/demo:
+    dependencies:
+      '@gateway/credential-format':
+        specifier: workspace:*
+        version: link:../credential-format
+      '@gateway/holder':
+        specifier: workspace:*
+        version: link:../holder
+      '@gateway/issuer':
+        specifier: workspace:*
+        version: link:../issuer
+      '@gateway/jose':
+        specifier: workspace:*
+        version: link:../jose
+      '@gateway/oid4vci':
+        specifier: workspace:*
+        version: link:../oid4vci
+      '@gateway/presentation-exchange':
+        specifier: workspace:*
+        version: link:../presentation-exchange
+      '@gateway/sd-jwt':
+        specifier: workspace:*
+        version: link:../sd-jwt
+      '@gateway/status-list':
+        specifier: workspace:*
+        version: link:../status-list
+      '@gateway/trust':
+        specifier: workspace:*
+        version: link:../trust
+      '@gateway/verifier':
+        specifier: workspace:*
+        version: link:../verifier
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
   packages/e2e:
     dependencies:
       '@gateway/dcql':
