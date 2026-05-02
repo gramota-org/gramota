@@ -130,11 +130,19 @@ Repos: GitHub. CI tested against the EU reference verifier and issuer.
 
 ### Hosted SaaS layer (the monetization)
 
-A managed version of the same library at `api.[name].dev`:
+A managed version of the same library at `api.[name].dev`. **Two-sided
+from day one** — verifier (relying parties accepting credentials) AND
+issuer (organizations issuing credentials), both behind one account.
+
+Full product spec in [SAAS.md](./SAAS.md). High-level features:
 
 - Drop-in REST/JSON API mirroring the SDK shape.
+- Three integration patterns: API-first (Stripe pattern), hosted issuance
+  UI (no engineering team), or hybrid (API + read-only audit dashboard).
 - Hosted trust list management (we keep the EU trusted lists fresh; you don't).
 - Hosted key management for issuance flows (KMS-backed, EU data residency).
+- Hosted IETF Token Status List publication (revocation infrastructure).
+- Hosted `.well-known/jwt-vc-issuer` discovery per tenant.
 - Audit logs, webhooks, dashboards, API keys, multi-environment (test/live).
 - Stripe Checkout for self-serve signup.
 
