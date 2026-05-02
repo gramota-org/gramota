@@ -7,10 +7,12 @@
 The TypeScript SDK for the **EU Digital Identity Wallet (EUDIW)**.
 Verify, issue, and integrate EUDIW credentials in 20 lines of code.
 
+[![npm](https://img.shields.io/npm/v/@gramota/verifier?label=%40gramota%2Fverifier&color=cb3837&logo=npm)](https://www.npmjs.com/package/@gramota/verifier)
 [![Tests](https://img.shields.io/badge/tests-524%20mock%20%2B%2031%20live-brightgreen)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)]()
 [![Node](https://img.shields.io/badge/Node-20%2B-brightgreen)]()
+[![Provenance](https://img.shields.io/badge/npm-provenance%20signed-blue?logo=sigstore)](https://www.npmjs.com/package/@gramota/verifier)
 
 ---
 
@@ -23,6 +25,14 @@ The existing identity SDKs are heavy, Kotlin-first, and built for identity
 specialists. Gramota is **TypeScript-native, opinionated, and built for the
 millions of web developers** who'd otherwise have to read 80 pages of
 EU ARF documentation just to verify a holder.
+
+**Install:**
+
+```bash
+npm install @gramota/verifier
+# or: pnpm add @gramota/verifier
+# or: yarn add @gramota/verifier
+```
 
 **Five-line verifier:**
 
@@ -62,21 +72,48 @@ Commission's reference infrastructure** (`dev.issuer-backend.eudiw.dev`,
 
 ## Packages
 
-```
-@gramota/jose                  — JWS sign + verify + x5c chain validation; pluggable Signer
-@gramota/sd-jwt                — SD-JWT-VC parser, hash binding, KB-JWT
-@gramota/oid4vp                — OID4VP request + response wire format
-@gramota/oid4vci               — OID4VCI: pre-auth, auth-code, PAR, DPoP, AS metadata
-@gramota/presentation-exchange — DIF PE v2
-@gramota/dcql                  — Digital Credentials Query Language (OID4VP 2.0)
-@gramota/credential-format     — Pluggable format-handler registry (SD-JWT-VC; mDoc TBD)
-@gramota/trust                 — TrustResolver: Static, JwksUrl, SdJwtVcIssuer (.well-known/jwt-vc-issuer)
-@gramota/status-list           — IETF Token Status List + StatusResolver Strategy
-@gramota/verifier              — High-level relying-party verifier (10 security checks)
-@gramota/issuer                — High-level issuer for SD-JWT-VC
-@gramota/holder                — High-level holder/wallet (credentials.* + offers.*)
-@gramota/demo                  — Runnable CLI demos: self-loop, eu-pid, list
-```
+All packages live on the [`@gramota` npm org](https://www.npmjs.com/org/gramota).
+Every published tarball ships with a [signed provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
+linking it to a specific GitHub commit (Sigstore transparency log).
+
+### High-level (start here)
+
+| Package | What it does |
+|---|---|
+| [`@gramota/verifier`](https://www.npmjs.com/package/@gramota/verifier) [![npm](https://img.shields.io/npm/v/@gramota/verifier?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/verifier) | Relying-party verifier (10 security checks) |
+| [`@gramota/issuer`](https://www.npmjs.com/package/@gramota/issuer) [![npm](https://img.shields.io/npm/v/@gramota/issuer?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/issuer) | High-level issuer for SD-JWT-VC |
+| [`@gramota/holder`](https://www.npmjs.com/package/@gramota/holder) [![npm](https://img.shields.io/npm/v/@gramota/holder?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/holder) | Headless holder / wallet (`credentials.*` + `offers.*`) |
+
+### Protocol & transport
+
+| Package | What it does |
+|---|---|
+| [`@gramota/oid4vp`](https://www.npmjs.com/package/@gramota/oid4vp) [![npm](https://img.shields.io/npm/v/@gramota/oid4vp?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/oid4vp) | OID4VP request + response wire format |
+| [`@gramota/oid4vci`](https://www.npmjs.com/package/@gramota/oid4vci) [![npm](https://img.shields.io/npm/v/@gramota/oid4vci?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/oid4vci) | OID4VCI: pre-auth, auth-code, PAR, DPoP |
+| [`@gramota/presentation-exchange`](https://www.npmjs.com/package/@gramota/presentation-exchange) [![npm](https://img.shields.io/npm/v/@gramota/presentation-exchange?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/presentation-exchange) | DIF Presentation Exchange v2 |
+| [`@gramota/dcql`](https://www.npmjs.com/package/@gramota/dcql) [![npm](https://img.shields.io/npm/v/@gramota/dcql?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/dcql) | Digital Credentials Query Language (OID4VP 2.0) |
+
+### Cryptography & credentials
+
+| Package | What it does |
+|---|---|
+| [`@gramota/jose`](https://www.npmjs.com/package/@gramota/jose) [![npm](https://img.shields.io/npm/v/@gramota/jose?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/jose) | JWS sign + verify + x5c chain validation; pluggable `Signer` |
+| [`@gramota/sd-jwt`](https://www.npmjs.com/package/@gramota/sd-jwt) [![npm](https://img.shields.io/npm/v/@gramota/sd-jwt?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/sd-jwt) | SD-JWT-VC parser, hash binding, KB-JWT |
+| [`@gramota/credential-format`](https://www.npmjs.com/package/@gramota/credential-format) [![npm](https://img.shields.io/npm/v/@gramota/credential-format?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/credential-format) | Pluggable format-handler registry (SD-JWT-VC; mDoc TBD) |
+
+### Trust & revocation
+
+| Package | What it does |
+|---|---|
+| [`@gramota/trust`](https://www.npmjs.com/package/@gramota/trust) [![npm](https://img.shields.io/npm/v/@gramota/trust?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/trust) | `TrustResolver`: Static, JwksUrl, SdJwtVcIssuer (`.well-known/jwt-vc-issuer`) |
+| [`@gramota/status-list`](https://www.npmjs.com/package/@gramota/status-list) [![npm](https://img.shields.io/npm/v/@gramota/status-list?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/status-list) | IETF Token Status List + `StatusResolver` Strategy |
+
+### Internal (not published)
+
+| Package | What it does |
+|---|---|
+| `@gramota/demo` | Runnable CLI demos: `self-loop`, `eu-pid`, `list` |
+| `@gramota/e2e` | Cross-package integration test suite |
 
 Architecture leans hard on **GoF Strategy + DI**:
 
@@ -131,11 +168,12 @@ Live tests gated by `EUDI_LIVE=1`. CI runs mock on every push, live nightly.
 
 ## Project status
 
-- **Phase 0** (foundation): ✅ done — 13 packages, 524+31 tests, EU-live verified
-- **Phase 1** (public launch): 🟡 in progress — distribution, docs site, blog
+- **Phase 0** (foundation): ✅ done — 14 packages (12 published, 2 internal), 524+31 tests, EU-live verified
+- **Phase 1** (public launch): 🟡 in progress — ✅ npm published, ⏳ docs site, ⏳ blog
 - **Phase 2** (downstream): 🗓 future — WordPress / Shopify / Stripe Connect
 
 Strategy and roadmap: [MANIFEST.md](./MANIFEST.md).
+Release flow: [PUBLISHING.md](./PUBLISHING.md).
 
 ---
 
