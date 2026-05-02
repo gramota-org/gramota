@@ -75,8 +75,12 @@ jobs:
 
       - name: Configure npm auth
         run: |
-          echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > .npmrc
-          echo "registry=https://registry.npmjs.org/" >> .npmrc
+          # Write to $HOME/.npmrc (user-level config) so npm picks it up
+          # from any cwd. A repo-root .npmrc would only be read when cwd
+          # is the repo root — not from inside packages/<name>/ where the
+          # publish loop runs.
+          echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > $HOME/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> $HOME/.npmrc
           # Sanity check — fails the step if token isn't valid
           npm whoami
         env:
