@@ -1,16 +1,26 @@
 name: Release
 
-# Triggered by pushes to main. Two modes:
-#  1. There are pending changesets in .changeset/*.md
-#     → opens or updates a "Version Packages" PR that bumps versions and updates CHANGELOGs.
-#  2. The "Version Packages" PR was just merged (no remaining changesets, but versions are bumped)
-#     → publishes every changed package to npm.
+# Triggered by pushes to main. Two phases:
+#
+#  Bootstrap (one-time, while no @gramota/* packages exist on npm yet):
+#    Set INITIAL_PUBLISH=1 in the repo (via a vars/inputs gate) — runs the
+#    `Bootstrap publish` step that does a direct `pnpm publish -r`.
+#
+#  Steady state:
+#    Uses changesets/action — opens "Version Packages" PRs on changeset
+#    files, publishes when those PRs merge.
 #
 # Requires repo secret NPM_TOKEN with publish permission on the @gramota scope.
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: "Run direct pnpm publish (bypasses changesets — for first release)"
+        type: boolean
+        default: false
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -19,8 +29,6 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
 
-    # Permissions needed by changesets/action to open the Version PR
-    # and create a GitHub Release on publish.
     permissions:
       contents: write
       pull-requests: write
@@ -30,7 +38,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # changesets needs full history to compute changed packages.
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -41,7 +48,8 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
-          registry-url: https://registry.npmjs.org/
+          # No registry-url here — we write our own .npmrc below to avoid
+          # the NODE_AUTH_TOKEN vs NPM_TOKEN env-var dance.
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -65,29 +73,38 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Configure npm auth
+        run: |
+          echo "//registry.npmjs.org/:_authToken=\${NPM_TOKEN}" > .npmrc
+          echo "registry=https://registry.npmjs.org/" >> .npmrc
+          # Sanity check — fails the step if token isn't valid
+          npm whoami
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Bootstrap path: direct pnpm publish, used for the first publish
+      # before any @gramota/* packages exist on npm. Triggered by
+      # workflow_dispatch with bootstrap=true.
+      - name: Bootstrap publish (direct pnpm)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap }}
+        run: |
+          pnpm publish -r --access public --no-git-checks --provenance
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+
+      # Steady-state path: changesets/action handles versioning + publish
+      # via "Version Packages" PRs. Skipped during bootstrap.
       - name: Create Release Pull Request or Publish
         id: changesets
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.bootstrap }}
         uses: changesets/action@v1
         with:
-          # `version` runs `changeset version` to bump versions in the Version PR.
           version: pnpm exec changeset version
-          # `publish` runs `changeset publish` after the Version PR merges.
-          # `--access public` is set per-package via publishConfig, no flag needed here.
           publish: pnpm exec changeset publish
           commit: "chore: release packages"
           title: "chore: release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Two env vars, same value. Both are required:
-          # - NPM_TOKEN: changesets/action checks process.env.NPM_TOKEN to
-          #   decide between traditional auth and OIDC trusted publishing.
-          #   Without it, it silently switches to OIDC, which requires the
-          #   package to ALREADY exist on npm with a registered trusted
-          #   publisher — useless for brand-new packages.
-          # - NODE_AUTH_TOKEN: actions/setup-node@v4 with registry-url
-          #   writes an .npmrc referencing ${NODE_AUTH_TOKEN}; npm publish
-          #   reads the token from there. Without it, the .npmrc resolves
-          #   to an empty string and publishes are anonymous.
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
