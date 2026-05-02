@@ -133,11 +133,9 @@ Live tests gated by `EUDI_LIVE=1`. CI runs mock on every push, live nightly.
 
 - **Phase 0** (foundation): ✅ done — 13 packages, 524+31 tests, EU-live verified
 - **Phase 1** (public launch): 🟡 in progress — distribution, docs site, blog
-- **Phase 2** (hosted SaaS): 📋 designed (see [SAAS.md](./SAAS.md))
-- **Phase 3** (downstream): 🗓 future — WordPress / Shopify / Stripe Connect
+- **Phase 2** (downstream): 🗓 future — WordPress / Shopify / Stripe Connect
 
 Strategy and roadmap: [MANIFEST.md](./MANIFEST.md).
-SaaS product spec: [SAAS.md](./SAAS.md).
 
 ---
 
