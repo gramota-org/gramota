@@ -9,12 +9,20 @@ on:
   schedule:
     - cron: "0 4 * * *"
 
+# Cancel in-progress runs when a new commit lands on the same PR/branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   test:
     name: Test (mock + typecheck)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Turbo's git-based change detection needs full history.
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -27,21 +35,40 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm -r build
+      # Turborepo content-hash cache. Key on lockfile + workflow file so
+      # that dependency or workflow changes invalidate. Restore from any
+      # prior cache on the same branch (turbo will skip up-to-date tasks).
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref_name }}-
+            turbo-${{ runner.os }}-main-
+            turbo-${{ runner.os }}-
 
-      - run: pnpm test
+      - name: Build
+        run: pnpm build
 
-      - run: pnpm typecheck
+      - name: Test
+        run: pnpm test
+
+      - name: Typecheck
+        run: pnpm typecheck
 
   live:
     name: Live (EU dev infra interop)
-    # Run on nightly schedule + on PRs that touch the OID4VCI / verifier /
-    # trust packages — to catch EU spec/infra changes within a day.
-    if: github.event_name == 'schedule' || contains(github.event.pull_request.changed_files || '', 'packages/oid4vci') || contains(github.event.pull_request.changed_files || '', 'packages/trust')
+    # Run on nightly schedule, on push to main, or on every PR (the live
+    # tests are fast — ~2s — and the EU dev infra is the source of truth
+    # for our wire format. continue-on-error keeps PR-blocking off.)
+    if: github.event_name == 'schedule' || github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     continue-on-error: true  # EU dev infra outages shouldn't block PRs
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -54,6 +81,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm -r build
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.ref_name }}-
+            turbo-${{ runner.os }}-main-
+            turbo-${{ runner.os }}-
 
-      - run: pnpm test:live
+      - name: Build
+        run: pnpm build
+
+      - name: Live tests
+        run: pnpm test:live
