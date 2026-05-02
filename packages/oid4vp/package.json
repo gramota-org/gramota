@@ -1,6 +1,6 @@
 {
   "name": "@gramota/oid4vp",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "OpenID for Verifiable Presentations transport — authorization request/response wire format for EUDIW.",
   "license": "Apache-2.0",
   "type": "module",
@@ -12,9 +12,36 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
+  "homepage": "https://github.com/gramota-org/gramota#readme",
+  "bugs": {
+    "url": "https://github.com/gramota-org/gramota/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "oid4vp",
+    "openid4vp",
+    "verifiable-presentations",
+    "eudi",
+    "authorization-request"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gramota-org/gramota.git",
+    "directory": "packages/oid4vp"
   }
 }

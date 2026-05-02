@@ -1,6 +1,6 @@
 {
   "name": "@gramota/oid4vci",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "OpenID for Verifiable Credential Issuance — pre-authorized code flow for receiving SD-JWT-VC credentials.",
   "license": "Apache-2.0",
   "type": "module",
@@ -12,7 +12,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -25,5 +27,33 @@
     "@gramota/issuer": "workspace:*",
     "@gramota/sd-jwt": "workspace:*",
     "jose": "^5.9.6"
+  },
+  "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
+  "homepage": "https://github.com/gramota-org/gramota#readme",
+  "bugs": {
+    "url": "https://github.com/gramota-org/gramota/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "oid4vci",
+    "openid4vci",
+    "verifiable-credential-issuance",
+    "eudi",
+    "par",
+    "dpop",
+    "pkce",
+    "sd-jwt-vc"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gramota-org/gramota.git",
+    "directory": "packages/oid4vci"
   }
 }

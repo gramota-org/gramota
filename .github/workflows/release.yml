@@ -1,0 +1,74 @@
+name: Release
+
+# Triggered by pushes to main. Two modes:
+#  1. There are pending changesets in .changeset/*.md
+#     → opens or updates a "Version Packages" PR that bumps versions and updates CHANGELOGs.
+#  2. The "Version Packages" PR was just merged (no remaining changesets, but versions are bumped)
+#     → publishes every changed package to npm.
+#
+# Requires repo secret NPM_TOKEN with publish permission on the @gramota scope.
+
+on:
+  push:
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    # Permissions needed by changesets/action to open the Version PR
+    # and create a GitHub Release on publish.
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write  # needed for npm provenance
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # changesets needs full history to compute changed packages.
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          # `version` runs `changeset version` to bump versions in the Version PR.
+          version: pnpm exec changeset version
+          # `publish` runs `changeset publish` after the Version PR merges.
+          # `--access public` is set per-package via publishConfig, no flag needed here.
+          publish: pnpm exec changeset publish
+          commit: "chore: release packages"
+          title: "chore: release packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true

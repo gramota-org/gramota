@@ -1,6 +1,6 @@
 {
   "name": "@gramota/trust",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Pluggable trust resolution for EUDIW issuers — static lists, JWKS URLs, future EU Trusted List support.",
   "license": "Apache-2.0",
   "type": "module",
@@ -12,12 +12,40 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@gramota/jose": "workspace:*"
+  },
+  "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
+  "homepage": "https://github.com/gramota-org/gramota#readme",
+  "bugs": {
+    "url": "https://github.com/gramota-org/gramota/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "trust",
+    "trust-resolver",
+    "issuer-key",
+    "jwks-url",
+    "jwt-vc-issuer",
+    "eudi"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gramota-org/gramota.git",
+    "directory": "packages/trust"
   }
 }

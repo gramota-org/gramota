@@ -1,6 +1,6 @@
 {
   "name": "@gramota/sd-jwt",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "SD-JWT-VC parser and verifier for the EU Digital Identity Wallet.",
   "license": "Apache-2.0",
   "type": "module",
@@ -12,7 +12,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -22,5 +24,32 @@
   },
   "devDependencies": {
     "jose": "^5.9.6"
+  },
+  "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
+  "homepage": "https://github.com/gramota-org/gramota#readme",
+  "bugs": {
+    "url": "https://github.com/gramota-org/gramota/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "sd-jwt",
+    "sd-jwt-vc",
+    "selective-disclosure",
+    "ietf",
+    "eudi",
+    "verifiable-credentials",
+    "kb-jwt"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gramota-org/gramota.git",
+    "directory": "packages/sd-jwt"
   }
 }

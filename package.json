@@ -17,12 +17,16 @@
     "test:all": "pnpm -r build && EUDI_LIVE=1 vitest run",
     "typecheck": "pnpm -r build && pnpm -r typecheck",
     "clean": "pnpm -r exec rm -rf dist coverage *.tsbuildinfo",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm -r build && changeset publish",
     "demo": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js",
     "demo:self-loop": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js self-loop",
     "demo:eu-pid": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js eu-pid",
     "demo:list": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js list"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^20.14.0",
     "@vitest/coverage-v8": "^2.1.0",
     "typescript": "^5.6.0",
