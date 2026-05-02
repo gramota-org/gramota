@@ -8,7 +8,7 @@ import type {
   CredentialStore,
   StoredCredential,
 } from "../src/types.js";
-import { parseSdJwt } from "@gateway/sd-jwt";
+import { parseSdJwt } from "@gramota/sd-jwt";
 
 function fakeCredential(
   id: string,

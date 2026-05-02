@@ -2,7 +2,7 @@
  * Mock-fetcher E2E for the OID4VCI pre-authorized code flow.
  *
  * The mock simulates a real issuer: serves metadata, accepts pre-auth
- * codes, mints a real SD-JWT-VC bound to the holder via @gateway/issuer.
+ * codes, mints a real SD-JWT-VC bound to the holder via @gramota/issuer.
  * The Oid4vciClient drives the full flow; we assert it returns a
  * cryptographically valid credential whose cnf.jwk equals the holder's.
  *
@@ -11,9 +11,9 @@
 
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair, importJWK, CompactSign } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
-import { parseSdJwt, verifyHashBinding } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
+import { parseSdJwt, verifyHashBinding } from "@gramota/sd-jwt";
 import {
   Oid4vciClient,
   Oid4vciError,

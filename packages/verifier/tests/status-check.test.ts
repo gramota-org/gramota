@@ -16,9 +16,9 @@
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import type { ParsedSdJwt } from "@gateway/sd-jwt";
-import { buildKeyBindingJwt, issueSdJwt } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import type { ParsedSdJwt } from "@gramota/sd-jwt";
+import { buildKeyBindingJwt, issueSdJwt } from "@gramota/sd-jwt";
 import {
   StatusListResolver,
   buildStatusListToken,
@@ -26,7 +26,7 @@ import {
   type Fetcher as StatusListFetcher,
   type ResolveStatusOptions,
   type StatusResolver,
-} from "@gateway/status-list";
+} from "@gramota/status-list";
 import { Verifier } from "../src/index.js";
 
 const AUDIENCE = "https://my-bank.example.com";

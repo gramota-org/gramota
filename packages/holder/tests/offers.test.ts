@@ -2,16 +2,16 @@
  * Tests for holder.offers.{parse, accept} — the Stripe-style namespace
  * that ties OID4VCI to the holder's credential store.
  *
- * Uses a mock issuer (powered by @gateway/issuer) so the full flow runs
+ * Uses a mock issuer (powered by @gramota/issuer) so the full flow runs
  * without network: parse → metadata → token → proof JWT → credential
  * request → validate → store.
  */
 
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
-import { PRE_AUTHORIZED_CODE_GRANT, type Fetcher } from "@gateway/oid4vci";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
+import { PRE_AUTHORIZED_CODE_GRANT, type Fetcher } from "@gramota/oid4vci";
 import { Holder } from "../src/index.js";
 
 const ISSUER_URL = "https://issuer.example.com";

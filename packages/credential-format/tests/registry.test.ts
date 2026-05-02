@@ -1,5 +1,5 @@
 /**
- * @gateway/credential-format — registry behavior + extensibility.
+ * @gramota/credential-format — registry behavior + extensibility.
  *
  * Three layers of coverage:
  *

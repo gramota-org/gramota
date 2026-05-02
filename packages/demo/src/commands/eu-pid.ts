@@ -29,18 +29,18 @@
 import { createInterface } from "node:readline/promises";
 import { exportJWK, generateKeyPair } from "jose";
 import { spawn } from "node:child_process";
-import type { JsonWebKey } from "@gateway/jose";
-import { Holder } from "@gateway/holder";
+import type { JsonWebKey } from "@gramota/jose";
+import { Holder } from "@gramota/holder";
 import {
   Oid4vciClient,
   fetchIssuerMetadata,
-} from "@gateway/oid4vci";
-import { SdJwtVcIssuerTrustResolver } from "@gateway/trust";
+} from "@gramota/oid4vci";
+import { SdJwtVcIssuerTrustResolver } from "@gramota/trust";
 import {
   StatusListResolver,
   readStatusReference,
   StatusListError,
-} from "@gateway/status-list";
+} from "@gramota/status-list";
 import { FileCredentialStore } from "../file-store.js";
 import { divider, fail, info, step, success, warn } from "../ui.js";
 
@@ -63,7 +63,7 @@ async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {
 }
 
 export async function runEuPid(): Promise<void> {
-  divider("EUDI Gateway — receive a real EU-signed PID");
+  divider("Gramota — receive a real EU-signed PID");
   info(
     "drives Oid4vciClient.authorize() against dev.issuer-backend.eudiw.dev",
   );

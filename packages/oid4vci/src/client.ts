@@ -3,12 +3,12 @@ import {
   type JsonWebKey,
   type Signer,
   type SupportedAlg,
-} from "@gateway/jose";
+} from "@gramota/jose";
 import {
   CredentialFormatError,
   CredentialFormatRegistry,
   createDefaultCredentialFormatRegistry,
-} from "@gateway/credential-format";
+} from "@gramota/credential-format";
 import {
   parseCredentialOffer,
   preAuthorizedCodeFrom,

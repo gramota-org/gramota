@@ -14,14 +14,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { issueSdJwt } from "@gateway/sd-jwt";
+import { issueSdJwt } from "@gramota/sd-jwt";
 import {
   StaticTrustResolver,
   JwksUrlTrustResolver,
   type Fetcher,
-} from "@gateway/trust";
-import { Holder } from "@gateway/holder";
-import { Verifier } from "@gateway/verifier";
+} from "@gramota/trust";
+import { Holder } from "@gramota/holder";
+import { Verifier } from "@gramota/verifier";
 import {
   newEs256KeyPair,
   makeIssuerSigner,
@@ -53,7 +53,7 @@ describe("E2E scenario 1 — single-issuer happy path", () => {
       signer: await makeIssuerSigner(issuer.privateJwk),
     });
 
-    // Hold with @gateway/holder
+    // Hold with @gramota/holder
     const holder = new Holder({
       privateKey: holderKey.privateJwk,
       publicKey: holderKey.publicJwk,
@@ -72,7 +72,7 @@ describe("E2E scenario 1 — single-issuer happy path", () => {
       now: () => NOW_S - 5,
     });
 
-    // Verify with @gateway/verifier
+    // Verify with @gramota/verifier
     const verifier = new Verifier({
       audience: "https://verifier.example.com",
       issuerKey: issuer.publicJwk,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSdJwt } from "@gateway/sd-jwt";
+import { parseSdJwt } from "@gramota/sd-jwt";
 import {
   DcqlError,
   selectForDcql,

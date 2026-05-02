@@ -1,12 +1,12 @@
 {
-  "name": "@gateway/demo",
+  "name": "@gramota/demo",
   "version": "0.0.0",
   "private": true,
-  "description": "Runnable CLI demos for the EUDI Gateway SDK. Local self-loop + live EU PID receipt.",
+  "description": "Runnable CLI demos for the Gramota SDK. Local self-loop + live EU PID receipt.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "eudi-gateway-demo": "./dist/index.js"
+    "gramota-demo": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -14,16 +14,16 @@
     "start": "node ./dist/index.js"
   },
   "dependencies": {
-    "@gateway/credential-format": "workspace:*",
-    "@gateway/holder": "workspace:*",
-    "@gateway/issuer": "workspace:*",
-    "@gateway/jose": "workspace:*",
-    "@gateway/oid4vci": "workspace:*",
-    "@gateway/presentation-exchange": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*",
-    "@gateway/status-list": "workspace:*",
-    "@gateway/trust": "workspace:*",
-    "@gateway/verifier": "workspace:*",
+    "@gramota/credential-format": "workspace:*",
+    "@gramota/holder": "workspace:*",
+    "@gramota/issuer": "workspace:*",
+    "@gramota/jose": "workspace:*",
+    "@gramota/oid4vci": "workspace:*",
+    "@gramota/presentation-exchange": "workspace:*",
+    "@gramota/sd-jwt": "workspace:*",
+    "@gramota/status-list": "workspace:*",
+    "@gramota/trust": "workspace:*",
+    "@gramota/verifier": "workspace:*",
     "jose": "^5.9.6"
   }
 }

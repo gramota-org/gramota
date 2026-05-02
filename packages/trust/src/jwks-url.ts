@@ -1,4 +1,4 @@
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 import {
   TrustResolutionError,
   type TrustContext,

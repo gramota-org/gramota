@@ -23,7 +23,7 @@
  */
 
 import { randomBytes, createHash } from "node:crypto";
-import type { Signer } from "@gateway/jose";
+import type { Signer } from "@gramota/jose";
 import { Oid4vciError } from "./types.js";
 import type { Fetcher, FetcherResponse } from "./metadata.js";
 

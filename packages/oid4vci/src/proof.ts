@@ -1,4 +1,4 @@
-import { type Signer } from "@gateway/jose";
+import { type Signer } from "@gramota/jose";
 
 /**
  * Build a Proof of Possession JWT per OID4VCI §7.2.1.

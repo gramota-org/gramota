@@ -5,7 +5,7 @@ import {
   StaticTrustResolver,
   TrustResolutionError,
 } from "../src/index.js";
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 
 const k = (kid: string, n = "rsa-modulus"): JsonWebKey => ({
   kty: "RSA",

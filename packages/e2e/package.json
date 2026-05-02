@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/e2e",
+  "name": "@gramota/e2e",
   "version": "0.0.0",
   "private": true,
   "description": "Cross-package E2E tests exercising every public API together. Not published.",
@@ -10,17 +10,17 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/dcql": "workspace:*",
-    "@gateway/holder": "workspace:*",
-    "@gateway/issuer": "workspace:*",
-    "@gateway/jose": "workspace:*",
-    "@gateway/oid4vci": "workspace:*",
-    "@gateway/oid4vp": "workspace:*",
-    "@gateway/presentation-exchange": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*",
-    "@gateway/status-list": "workspace:*",
-    "@gateway/trust": "workspace:*",
-    "@gateway/verifier": "workspace:*"
+    "@gramota/dcql": "workspace:*",
+    "@gramota/holder": "workspace:*",
+    "@gramota/issuer": "workspace:*",
+    "@gramota/jose": "workspace:*",
+    "@gramota/oid4vci": "workspace:*",
+    "@gramota/oid4vp": "workspace:*",
+    "@gramota/presentation-exchange": "workspace:*",
+    "@gramota/sd-jwt": "workspace:*",
+    "@gramota/status-list": "workspace:*",
+    "@gramota/trust": "workspace:*",
+    "@gramota/verifier": "workspace:*"
   },
   "devDependencies": {
     "jose": "^5.9.6"

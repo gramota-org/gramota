@@ -32,7 +32,7 @@ import type { JsonWebKey, SupportedAlg } from "./types.js";
  * `sign()` takes the JWS-canonical "header.payload" string (two
  * base64url-encoded segments joined by a dot) and returns just the
  * base64url-encoded signature segment. This shape matches what
- * `@gateway/sd-jwt`'s `issueSdJwt` `signer` callback expects, so a
+ * `@gramota/sd-jwt`'s `issueSdJwt` `signer` callback expects, so a
  * `Signer` instance can drop in as that callback via `signer.sign`.
  *
  * Implementations are expected to be stateless from the caller's

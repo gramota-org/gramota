@@ -6,28 +6,28 @@ import {
   SdJwtVerificationError,
   SdJwtKeyBindingError,
   type ParsedSdJwt,
-} from "@gateway/sd-jwt";
+} from "@gramota/sd-jwt";
 import {
   verifyJws,
   JoseVerificationError,
   type JsonWebKey,
   type SupportedAlg,
-} from "@gateway/jose";
+} from "@gramota/jose";
 import {
   StaticTrustResolver,
   TrustResolutionError,
   type TrustResolver,
-} from "@gateway/trust";
+} from "@gramota/trust";
 import {
   buildAuthorizationRequestUrl,
   parseAuthorizationResponseBody,
   type AuthorizationRequest,
   type AuthorizationResponse,
-} from "@gateway/oid4vp";
+} from "@gramota/oid4vp";
 import type {
   CredentialStatusResult,
   StatusResolver,
-} from "@gateway/status-list";
+} from "@gramota/status-list";
 import {
   VerificationError,
   type FailureResult,
@@ -357,7 +357,7 @@ export class Verifier {
       response =
         typeof rawBody === "string"
           ? parseAuthorizationResponseBody(rawBody)
-          : (await import("@gateway/oid4vp")).parseAuthorizationResponseFromParams(
+          : (await import("@gramota/oid4vp")).parseAuthorizationResponseFromParams(
               rawBody,
             );
     } catch (err) {

@@ -1,5 +1,5 @@
-import type { JsonWebKey, Signer, SupportedAlg } from "@gateway/jose";
-import type { HashAlg, SdJwtDisclosure } from "@gateway/sd-jwt";
+import type { JsonWebKey, Signer, SupportedAlg } from "@gramota/jose";
+import type { HashAlg, SdJwtDisclosure } from "@gramota/sd-jwt";
 
 /**
  * Two equivalent ways to give the Issuer its signing capability:

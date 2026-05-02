@@ -1,4 +1,4 @@
-import { parseSdJwt, type ParsedSdJwt } from "@gateway/sd-jwt";
+import { parseSdJwt, type ParsedSdJwt } from "@gramota/sd-jwt";
 
 /**
  * Parse an SD-JWT-VC presentation token without verifying anything.

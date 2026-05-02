@@ -22,9 +22,9 @@
 import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
-import { parseSdJwt, verifyHashBinding } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
+import { parseSdJwt, verifyHashBinding } from "@gramota/sd-jwt";
 import {
   AUTHORIZATION_CODE_GRANT,
   Oid4vciClient,

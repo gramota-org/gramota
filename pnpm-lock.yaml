@@ -25,7 +25,7 @@ importers:
 
   packages/dcql:
     dependencies:
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
     devDependencies:
@@ -35,34 +35,34 @@ importers:
 
   packages/demo:
     dependencies:
-      '@gateway/credential-format':
+      '@gramota/credential-format':
         specifier: workspace:*
         version: link:../credential-format
-      '@gateway/holder':
+      '@gramota/holder':
         specifier: workspace:*
         version: link:../holder
-      '@gateway/issuer':
+      '@gramota/issuer':
         specifier: workspace:*
         version: link:../issuer
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
-      '@gateway/oid4vci':
+      '@gramota/oid4vci':
         specifier: workspace:*
         version: link:../oid4vci
-      '@gateway/presentation-exchange':
+      '@gramota/presentation-exchange':
         specifier: workspace:*
         version: link:../presentation-exchange
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
-      '@gateway/status-list':
+      '@gramota/status-list':
         specifier: workspace:*
         version: link:../status-list
-      '@gateway/trust':
+      '@gramota/trust':
         specifier: workspace:*
         version: link:../trust
-      '@gateway/verifier':
+      '@gramota/verifier':
         specifier: workspace:*
         version: link:../verifier
       jose:
@@ -71,37 +71,37 @@ importers:
 
   packages/e2e:
     dependencies:
-      '@gateway/dcql':
+      '@gramota/dcql':
         specifier: workspace:*
         version: link:../dcql
-      '@gateway/holder':
+      '@gramota/holder':
         specifier: workspace:*
         version: link:../holder
-      '@gateway/issuer':
+      '@gramota/issuer':
         specifier: workspace:*
         version: link:../issuer
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
-      '@gateway/oid4vci':
+      '@gramota/oid4vci':
         specifier: workspace:*
         version: link:../oid4vci
-      '@gateway/oid4vp':
+      '@gramota/oid4vp':
         specifier: workspace:*
         version: link:../oid4vp
-      '@gateway/presentation-exchange':
+      '@gramota/presentation-exchange':
         specifier: workspace:*
         version: link:../presentation-exchange
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
-      '@gateway/status-list':
+      '@gramota/status-list':
         specifier: workspace:*
         version: link:../status-list
-      '@gateway/trust':
+      '@gramota/trust':
         specifier: workspace:*
         version: link:../trust
-      '@gateway/verifier':
+      '@gramota/verifier':
         specifier: workspace:*
         version: link:../verifier
     devDependencies:
@@ -111,26 +111,26 @@ importers:
 
   packages/holder:
     dependencies:
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
-      '@gateway/oid4vci':
+      '@gramota/oid4vci':
         specifier: workspace:*
         version: link:../oid4vci
-      '@gateway/oid4vp':
+      '@gramota/oid4vp':
         specifier: workspace:*
         version: link:../oid4vp
-      '@gateway/presentation-exchange':
+      '@gramota/presentation-exchange':
         specifier: workspace:*
         version: link:../presentation-exchange
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
     devDependencies:
-      '@gateway/issuer':
+      '@gramota/issuer':
         specifier: workspace:*
         version: link:../issuer
-      '@gateway/verifier':
+      '@gramota/verifier':
         specifier: workspace:*
         version: link:../verifier
       jose:
@@ -139,10 +139,10 @@ importers:
 
   packages/issuer:
     dependencies:
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
     devDependencies:
@@ -158,17 +158,17 @@ importers:
 
   packages/oid4vci:
     dependencies:
-      '@gateway/credential-format':
+      '@gramota/credential-format':
         specifier: workspace:*
         version: link:../credential-format
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
     devDependencies:
-      '@gateway/issuer':
+      '@gramota/issuer':
         specifier: workspace:*
         version: link:../issuer
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
       jose:
@@ -179,13 +179,13 @@ importers:
 
   packages/presentation-exchange:
     dependencies:
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
 
   packages/sd-jwt:
     dependencies:
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
     devDependencies:
@@ -195,14 +195,14 @@ importers:
 
   packages/status-list:
     dependencies:
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
     devDependencies:
-      '@gateway/issuer':
+      '@gramota/issuer':
         specifier: workspace:*
         version: link:../issuer
       jose:
@@ -211,29 +211,29 @@ importers:
 
   packages/trust:
     dependencies:
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
 
   packages/verifier:
     dependencies:
-      '@gateway/jose':
+      '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
-      '@gateway/oid4vp':
+      '@gramota/oid4vp':
         specifier: workspace:*
         version: link:../oid4vp
-      '@gateway/sd-jwt':
+      '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
-      '@gateway/status-list':
+      '@gramota/status-list':
         specifier: workspace:*
         version: link:../status-list
-      '@gateway/trust':
+      '@gramota/trust':
         specifier: workspace:*
         version: link:../trust
     devDependencies:
-      '@gateway/issuer':
+      '@gramota/issuer':
         specifier: workspace:*
         version: link:../issuer
       jose:

@@ -10,9 +10,9 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { Issuer } from "@gateway/issuer";
-import { Holder } from "@gateway/holder";
-import { Verifier } from "@gateway/verifier";
+import { Issuer } from "@gramota/issuer";
+import { Holder } from "@gramota/holder";
+import { Verifier } from "@gramota/verifier";
 import { newEs256KeyPair } from "../src/test-helpers.js";
 
 const NOW_S = 1_700_000_050;

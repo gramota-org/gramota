@@ -19,16 +19,16 @@
  */
 
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
-import { Holder } from "@gateway/holder";
-import { Verifier } from "@gateway/verifier";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
+import { Holder } from "@gramota/holder";
+import { Verifier } from "@gramota/verifier";
 import {
   StatusListResolver,
   buildStatusListToken,
   type Fetcher as StatusListFetcher,
-} from "@gateway/status-list";
-import type { PresentationDefinition } from "@gateway/presentation-exchange";
+} from "@gramota/status-list";
+import type { PresentationDefinition } from "@gramota/presentation-exchange";
 import { FileCredentialStore } from "../file-store.js";
 import { step, success, info, divider } from "../ui.js";
 
@@ -49,7 +49,7 @@ async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {
 }
 
 export async function runSelfLoop(): Promise<void> {
-  divider("EUDI Gateway — self-loop demo");
+  divider("Gramota — self-loop demo");
   info(
     "exercises Issuer → Holder → Verifier locally, no network needed",
   );
@@ -196,7 +196,7 @@ export async function runSelfLoop(): Promise<void> {
   divider("");
   success("end-to-end roundtrip complete");
   info(
-    "the credential is persisted; run `eudi-gateway-demo list` to see it",
+    "the credential is persisted; run `gramota-demo list` to see it",
   );
 }
 

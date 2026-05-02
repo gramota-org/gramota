@@ -1,5 +1,5 @@
-import type { JsonWebKey, Signer, SupportedAlg } from "@gateway/jose";
-import type { ParsedSdJwt } from "@gateway/sd-jwt";
+import type { JsonWebKey, Signer, SupportedAlg } from "@gramota/jose";
+import type { ParsedSdJwt } from "@gramota/sd-jwt";
 
 /** Identifier of a stored credential. UUID v4, generated at receive time. */
 export type CredentialId = string;

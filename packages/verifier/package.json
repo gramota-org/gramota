@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/verifier",
+  "name": "@gramota/verifier",
   "version": "0.0.0",
   "description": "Relying-party verifier for the EU Digital Identity Wallet. One client, one method, full IETF SD-JWT-VC + KB-JWT spec compliance.",
   "license": "Apache-2.0",
@@ -18,14 +18,14 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/jose": "workspace:*",
-    "@gateway/oid4vp": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*",
-    "@gateway/status-list": "workspace:*",
-    "@gateway/trust": "workspace:*"
+    "@gramota/jose": "workspace:*",
+    "@gramota/oid4vp": "workspace:*",
+    "@gramota/sd-jwt": "workspace:*",
+    "@gramota/status-list": "workspace:*",
+    "@gramota/trust": "workspace:*"
   },
   "devDependencies": {
-    "@gateway/issuer": "workspace:*",
+    "@gramota/issuer": "workspace:*",
     "jose": "^5.9.6"
   }
 }

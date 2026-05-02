@@ -9,12 +9,12 @@ const DC_SD_JWT_VC_FORMAT = "dc+sd-jwt";
 /**
  * Default handler for SD-JWT-VC and dc+sd-jwt credentials.
  *
- * Bundled with `@gateway/credential-format` because SD-JWT-VC is the
+ * Bundled with `@gramota/credential-format` because SD-JWT-VC is the
  * dominant EUDIW format. mDoc gets its own package when it lands.
  *
  * The validation here is intentionally minimal — full structural
  * verification (parsing, hash binding, KB-JWT, etc.) lives in
- * `@gateway/sd-jwt` / `@gateway/verifier`. This handler only confirms
+ * `@gramota/sd-jwt` / `@gramota/verifier`. This handler only confirms
  * the token "looks like" an SD-JWT-VC issuance: at minimum a JWS with
  * `~`-separated disclosure segments. That's enough to gate the OID4VCI
  * credential-endpoint response without pulling in the full sd-jwt

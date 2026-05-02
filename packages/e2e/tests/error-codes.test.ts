@@ -7,24 +7,24 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { Issuer, IssuerError } from "@gateway/issuer";
-import { Holder, HolderError } from "@gateway/holder";
-import { Verifier, VerificationError } from "@gateway/verifier";
-import { JoseVerificationError } from "@gateway/jose";
+import { Issuer, IssuerError } from "@gramota/issuer";
+import { Holder, HolderError } from "@gramota/holder";
+import { Verifier, VerificationError } from "@gramota/verifier";
+import { JoseVerificationError } from "@gramota/jose";
 import {
   SdJwtKeyBindingError,
   SdJwtParseError,
   parseSdJwt,
-} from "@gateway/sd-jwt";
-import { Oid4vpError, parseAuthorizationRequestUrl } from "@gateway/oid4vp";
+} from "@gramota/sd-jwt";
+import { Oid4vpError, parseAuthorizationRequestUrl } from "@gramota/oid4vp";
 import {
   PresentationExchangeError,
   parseJsonPath,
-} from "@gateway/presentation-exchange";
+} from "@gramota/presentation-exchange";
 import {
   StaticTrustResolver,
   TrustResolutionError,
-} from "@gateway/trust";
+} from "@gramota/trust";
 import { newEs256KeyPair, makeIssuerSigner } from "../src/test-helpers.js";
 
 describe("Error codes — present, typed, switchable", () => {
@@ -118,7 +118,7 @@ describe("Error codes — present, typed, switchable", () => {
     const holderKey = await newEs256KeyPair();
 
     // Issue a credential with proper cnf binding.
-    const { issueSdJwt, buildKeyBindingJwt } = await import("@gateway/sd-jwt");
+    const { issueSdJwt, buildKeyBindingJwt } = await import("@gramota/sd-jwt");
     const signer = await makeIssuerSigner(issuerKey.privateJwk);
     const { token } = await issueSdJwt({
       payload: {
@@ -143,7 +143,7 @@ describe("Error codes — present, typed, switchable", () => {
     const presentation = `${token}${kb}`;
     const parsed = parseSdJwt(presentation);
 
-    const { verifyKeyBinding } = await import("@gateway/sd-jwt");
+    const { verifyKeyBinding } = await import("@gramota/sd-jwt");
     try {
       await verifyKeyBinding(parsed, {
         expectedAudience: "WRONG-AUDIENCE",
@@ -213,7 +213,7 @@ describe("Error codes — present, typed, switchable", () => {
   });
 
   it("JoseVerificationError carries 'jose.*' codes", async () => {
-    const { verifyJws } = await import("@gateway/jose");
+    const { verifyJws } = await import("@gramota/jose");
     try {
       await verifyJws("not-a-jws", { kty: "EC", crv: "P-256", x: "x", y: "y" });
       throw new Error("should have thrown");

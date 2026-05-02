@@ -6,11 +6,11 @@ import {
 } from "./types.js";
 
 /**
- * Build a signer compatible with `@gateway/sd-jwt`'s `issueSdJwt` `signer`
+ * Build a signer compatible with `@gramota/sd-jwt`'s `issueSdJwt` `signer`
  * field — takes `header.payload` and returns just the base64url signature.
  *
- * This is the bridge between @gateway/jose (which signs full JWS strings)
- * and @gateway/sd-jwt (which composes its own header/payload and only needs
+ * This is the bridge between @gramota/jose (which signs full JWS strings)
+ * and @gramota/sd-jwt (which composes its own header/payload and only needs
  * the signature back).
  */
 export async function makeSigner(

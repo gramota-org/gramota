@@ -36,7 +36,7 @@ export class SdJwtVerificationError extends Error {
  * been smuggled in by the holder.
  *
  * Note: this verifies the *hash binding* only. Issuer-signature verification
- * (`@gateway/jose`) and key-binding-JWT verification are separate layers above.
+ * (`@gramota/jose`) and key-binding-JWT verification are separate layers above.
  */
 export function verifyHashBinding(parsed: ParsedSdJwt): VerifiedSdJwt {
   const hashAlgorithm =

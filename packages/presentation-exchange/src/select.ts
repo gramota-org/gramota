@@ -47,7 +47,7 @@ export interface Selection<TCredential> {
  *
  * Pure function: given a definition and a credential set, return what to
  * present. Caller (the holder) executes the actual presentation building
- * with `@gateway/holder`.
+ * with `@gramota/holder`.
  */
 export function selectForDefinition<TCredential>(
   input: SelectInput<TCredential>,

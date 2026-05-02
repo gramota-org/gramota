@@ -1,5 +1,5 @@
 /**
- * Live E2E tests that drive @gateway/* libraries against the EU
+ * Live E2E tests that drive @gramota/* libraries against the EU
  * Commission's public dev verifier (https://dev.verifier-backend.eudiw.dev).
  *
  * Skipped by default. Run with EUDI_LIVE=1 to enable:
@@ -17,14 +17,14 @@
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 import {
   parseAuthorizationRequestSearchParams,
   type AuthorizationRequest,
-} from "@gateway/oid4vp";
-import { verifyJwsWithX5c } from "@gateway/jose";
-import { selectForDcql, type DcqlQuery } from "@gateway/dcql";
-import { issueSdJwt, parseSdJwt, stubSignature } from "@gateway/sd-jwt";
+} from "@gramota/oid4vp";
+import { verifyJwsWithX5c } from "@gramota/jose";
+import { selectForDcql, type DcqlQuery } from "@gramota/dcql";
+import { issueSdJwt, parseSdJwt, stubSignature } from "@gramota/sd-jwt";
 
 const LIVE = process.env["EUDI_LIVE"] === "1";
 const dlive = LIVE ? describe : describe.skip;
@@ -104,8 +104,8 @@ function asParams(payload: Record<string, unknown>): Record<string, string> {
   return out;
 }
 
-dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
-  it("@gateway/jose cryptographically verifies the LIVE JAR signature via x5c", async () => {
+dlive("EUDIW public dev verifier — live E2E driving @gramota/*", () => {
+  it("@gramota/jose cryptographically verifies the LIVE JAR signature via x5c", async () => {
     const txn = await initTransaction();
 
     // GAP-CLOSING assertion: our SDK verifies the signature on a real,
@@ -125,7 +125,7 @@ dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
     ).toBeGreaterThan(0);
   }, 20_000);
 
-  it("@gateway/oid4vp accepts the LIVE JAR payload as an AuthorizationRequest", async () => {
+  it("@gramota/oid4vp accepts the LIVE JAR payload as an AuthorizationRequest", async () => {
     const txn = await initTransaction();
 
     // Verify signature first — never trust a parsed-but-unverified request.
@@ -142,7 +142,7 @@ dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
     expect(typeof parsed.nonce).toBe("string");
   }, 20_000);
 
-  it("@gateway/dcql parses the LIVE DCQL query (we asked for SD-JWT-VC)", async () => {
+  it("@gramota/dcql parses the LIVE DCQL query (we asked for SD-JWT-VC)", async () => {
     const txn = await initTransaction();
     const verified = await verifyJwsWithX5c(txn.request);
 
@@ -171,7 +171,7 @@ dlive("EUDIW public dev verifier — live E2E driving @gateway/*", () => {
     expect(sel.unmatched[0]?.reason).toMatch(/no credential satisfies/);
   }, 20_000);
 
-  it("@gateway/dcql FULLY MATCHES the live EU DCQL query when given a structurally-correct PID", async () => {
+  it("@gramota/dcql FULLY MATCHES the live EU DCQL query when given a structurally-correct PID", async () => {
     // The killer test: bring our own SD-JWT-VC PID (synthetic — it won't
     // verify against an EU trust anchor, but the matcher only checks
     // structure) and prove our DCQL matcher correctly identifies it as

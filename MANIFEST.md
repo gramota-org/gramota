@@ -1,5 +1,7 @@
-# EUDI Gateway
+# Gramota
 
+> *гра́мота* — the Slavic word for an official charter or certificate of authority.
+>
 > The EU Digital Identity Wallet SDK for the rest of us.
 > Verify, issue, and integrate EUDIW in 20 lines of TypeScript.
 
@@ -39,7 +41,7 @@ walt.id is a horizontal, multi-ecosystem, multi-protocol, multi-language identit
 
 We win by being **narrower, more polished, and more accessible**:
 
-| | walt.id | EUDI Gateway |
+| | walt.id | Gramota |
 |---|---|---|
 | Language | Kotlin/JVM-first | **TypeScript/JavaScript-first** |
 | Scope | Any ecosystem, any protocol | **EUDIW only, opinionated** |
@@ -114,23 +116,23 @@ Why gated: network dependence, EU outage tolerance, keep the default loop determ
 
 npm packages under a single scope:
 
-- `@gateway/verifier` — relying-party SDK. Verify OID4VP presentations, SD-JWT-VC and mdoc credentials, against configurable EU trust lists.
-- `@gateway/issuer` — issuance SDK. Issue SD-JWT-VC credentials via OID4VCI, with key management abstractions.
-- `@gateway/holder` — wallet/holder logic for downstream wallets and test harnesses.
-- `@gateway/types` — shared TypeScript types for OID4VC, OID4VP, SD-JWT-VC, mdoc, EUDI ARF data structures.
-- `@gateway/trust` — EU Trusted List parsing, fetching, and certificate validation.
+- `@gramota/verifier` — relying-party SDK. Verify OID4VP presentations, SD-JWT-VC and mdoc credentials, against configurable EU trust lists.
+- `@gramota/issuer` — issuance SDK. Issue SD-JWT-VC credentials via OID4VCI, with key management abstractions.
+- `@gramota/holder` — wallet/holder logic for downstream wallets and test harnesses.
+- `@gramota/types` — shared TypeScript types for OID4VC, OID4VP, SD-JWT-VC, mdoc, EUDI ARF data structures.
+- `@gramota/trust` — EU Trusted List parsing, fetching, and certificate validation.
 
 Plus framework adapters as users ask for them:
 
-- `@gateway/express`, `@gateway/fastify`, `@gateway/hono`, `@gateway/nextjs`
-- `@gateway/react`, `@gateway/vue`, `@gateway/svelte` for the holder/relying-party UI
+- `@gramota/express`, `@gramota/fastify`, `@gramota/hono`, `@gramota/nextjs`
+- `@gramota/react`, `@gramota/vue`, `@gramota/svelte` for the holder/relying-party UI
 
 License: **Apache 2.0**.
 Repos: GitHub. CI tested against the EU reference verifier and issuer.
 
 ### Hosted SaaS layer (the monetization)
 
-A managed version of the same library at `api.[name].dev`. **Two-sided
+A managed version of the same library at `api.gramota.dev`. **Two-sided
 from day one** — verifier (relying parties accepting credentials) AND
 issuer (organizations issuing credentials), both behind one account.
 
@@ -206,7 +208,7 @@ The product is the marketing. The marketing is the product.
 ### Phase 0 — Foundation (Weeks 1–4)
 
 - Monorepo scaffolded with pnpm workspaces.
-- `@gateway/types` and `@gateway/verifier` v0.1: minimal OID4VP + SD-JWT-VC verification. Tested against the EU reference verifier in CI.
+- `@gramota/types` and `@gramota/verifier` v0.1: minimal OID4VP + SD-JWT-VC verification. Tested against the EU reference verifier in CI.
 - Docs site live at the chosen domain.
 - Landing page with email capture.
 - GitHub repo public, MIT/Apache 2 licensed.
@@ -215,8 +217,8 @@ The product is the marketing. The marketing is the product.
 
 ### Phase 1 — Public launch (Weeks 5–10)
 
-- `@gateway/issuer` v0.1: OID4VCI issuance flow.
-- `@gateway/trust` v0.1: EU Trusted List fetch + validate.
+- `@gramota/issuer` v0.1: OID4VCI issuance flow.
+- `@gramota/trust` v0.1: EU Trusted List fetch + validate.
 - 6 long-form blog posts published.
 - ProductHunt launch.
 - Hacker News launch (timed to a meaningful technical post, not a "we exist" post).
@@ -225,11 +227,11 @@ The product is the marketing. The marketing is the product.
 
 ### Phase 2 — Hosted SaaS launch (Months 3–6)
 
-- `api.[name].dev` live with the four pricing tiers.
+- `api.gramota.dev` live with the four pricing tiers.
 - Self-serve signup, Stripe Checkout, API keys, dashboard.
 - Hosted trust list service, webhook system.
 - First 10 paying customers.
-- One framework adapter (`@gateway/nextjs` first — biggest dev population).
+- One framework adapter (`@gramota/nextjs` first — biggest dev population).
 
 **Success signal:** 5–25 paying customers, €1k–€10k MRR, organic GitHub growth.
 
@@ -314,6 +316,6 @@ This is an indie-to-platform path, not a venture path. Optionality preserves bot
 - Repo initialized: `/Users/petromilpavlov/Work/eudi-gateway`
 - Reference forks cloned as conformance fixtures: `eudi-srv-verifier-endpoint`, `eudi-web-verifier`, `eudi-srv-pid-issuer`
 - This manifest committed.
-- Phase 0 Week 1 scope: monorepo scaffold + `@gateway/types` skeleton + `@gateway/verifier` v0.1 against EU reference vectors.
+- Phase 0 Week 1 scope: monorepo scaffold + `@gramota/types` skeleton + `@gramota/verifier` v0.1 against EU reference vectors.
 
 Next concrete action: scaffold the monorepo and ship the verifier v0.1 against the EU reference test fixtures.

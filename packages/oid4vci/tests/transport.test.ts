@@ -16,7 +16,7 @@
 
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 import {
   AUTHORIZATION_CODE_GRANT,
   DirectAuthorizationTransport,

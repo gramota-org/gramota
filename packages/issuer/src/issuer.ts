@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { issueSdJwt, type HashAlg } from "@gateway/sd-jwt";
-import { asSigner, type JsonWebKey, type Signer } from "@gateway/jose";
+import { issueSdJwt, type HashAlg } from "@gramota/sd-jwt";
+import { asSigner, type JsonWebKey, type Signer } from "@gramota/jose";
 import {
   IssuerError,
   type IssueOptions,
@@ -14,7 +14,7 @@ const DEFAULT_HASH_ALG: HashAlg = "sha-256";
 /**
  * The issuer role per IETF SD-JWT-VC §3.
  *
- * Wraps `issueSdJwt` (the low-level primitive in `@gateway/sd-jwt`) with:
+ * Wraps `issueSdJwt` (the low-level primitive in `@gramota/sd-jwt`) with:
  *   - stateful config (signer, issuer id, optional kid/typ/hashAlg),
  *   - holder-binding (cnf.jwk),
  *   - sensible expiry handling (`expiresIn` or `expiresAt`),

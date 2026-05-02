@@ -1,5 +1,5 @@
-import { buildKeyBindingJwt } from "@gateway/sd-jwt";
-import type { Signer } from "@gateway/jose";
+import { buildKeyBindingJwt } from "@gramota/sd-jwt";
+import type { Signer } from "@gramota/jose";
 import {
   HolderError,
   type CredentialStore,

@@ -8,21 +8,21 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { issueSdJwt } from "@gateway/sd-jwt";
-import { Holder } from "@gateway/holder";
-import { Verifier } from "@gateway/verifier";
+import { issueSdJwt } from "@gramota/sd-jwt";
+import { Holder } from "@gramota/holder";
+import { Verifier } from "@gramota/verifier";
 import {
   buildAuthorizationRequestUrl,
   buildAuthorizationResponseBody,
   parseAuthorizationRequestUrl,
   parseAuthorizationResponseBody,
   type AuthorizationRequest,
-} from "@gateway/oid4vp";
+} from "@gramota/oid4vp";
 import {
   buildPresentationSubmission,
   selectForDefinition,
   type PresentationDefinition,
-} from "@gateway/presentation-exchange";
+} from "@gramota/presentation-exchange";
 import { newEs256KeyPair, makeIssuerSigner } from "../src/test-helpers.js";
 
 const NOW_S = 1_700_000_050;

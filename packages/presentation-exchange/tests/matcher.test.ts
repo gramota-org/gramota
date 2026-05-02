@@ -1,7 +1,7 @@
 // SdJwtVcMatcher tests — descriptor evaluation against a parsed credential.
 
 import { describe, it, expect } from "vitest";
-import { parseSdJwt } from "@gateway/sd-jwt";
+import { parseSdJwt } from "@gramota/sd-jwt";
 import { SdJwtVcMatcher } from "../src/index.js";
 import type { InputDescriptor } from "../src/index.js";
 

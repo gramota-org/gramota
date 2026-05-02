@@ -1,4 +1,4 @@
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 
 /**
  * Compare two JWKs for equality of the *public key material only*.

@@ -1,4 +1,4 @@
-import type { Signer } from "@gateway/jose";
+import type { Signer } from "@gramota/jose";
 import {
   Oid4vciError,
   type CredentialRequest,

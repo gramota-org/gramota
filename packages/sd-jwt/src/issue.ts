@@ -8,7 +8,7 @@ export interface IssueSdJwtOptions {
   sdClaims?: Record<string, unknown>;
   /** JWT signing algorithm (placed in header `alg`). The signature itself is
    * produced by `signer` — this library does not perform cryptographic signing
-   * (that is `@gateway/jose`'s job). */
+   * (that is `@gramota/jose`'s job). */
   alg: string;
   /** Optional `typ` header claim (e.g. "vc+sd-jwt", "dc+sd-jwt"). */
   typ?: string;
@@ -71,7 +71,7 @@ export const stubSignature = (): string => "stub-signature";
  * Limitations of this version:
  *  - Object-property selective disclosure only (no nested SD, no array-element
  *    disclosures). Those are tracked for follow-up packages.
- *  - No cryptographic signing — signer is pluggable but `@gateway/jose` will
+ *  - No cryptographic signing — signer is pluggable but `@gramota/jose` will
  *    provide the real ES256/EdDSA/RS256 implementations.
  */
 export async function issueSdJwt(

@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/presentation-exchange",
+  "name": "@gramota/presentation-exchange",
   "version": "0.0.0",
   "description": "DIF Presentation Exchange v2 — match credentials against a verifier's presentation_definition.",
   "license": "Apache-2.0",
@@ -18,6 +18,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/sd-jwt": "workspace:*"
+    "@gramota/sd-jwt": "workspace:*"
   }
 }

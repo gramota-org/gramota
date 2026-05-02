@@ -1,11 +1,11 @@
-import type { ParsedSdJwt } from "@gateway/sd-jwt";
+import type { ParsedSdJwt } from "@gramota/sd-jwt";
 import { leafClaimName, evaluateJsonPath } from "./jsonpath.js";
 import type { CredentialMatcher, MatchResult } from "./matcher.js";
 import type { Field, InputDescriptor } from "./types.js";
 
 /** Convenience: a holder-stored credential exposes its parsed form. We
  * accept either the full StoredCredential shape or just the parsed view —
- * keeping the matcher decoupled from `@gateway/holder`'s internals. */
+ * keeping the matcher decoupled from `@gramota/holder`'s internals. */
 export interface SdJwtVcCredentialView {
   parsed: ParsedSdJwt;
 }

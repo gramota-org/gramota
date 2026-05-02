@@ -5,9 +5,9 @@
  * Skipped by default. Run with EUDI_LIVE=1 to enable.
  *
  * What this proves:
- *   1. our @gateway/oid4vci metadata parser correctly handles the EXACT
+ *   1. our @gramota/oid4vci metadata parser correctly handles the EXACT
  *      bytes the EU issuer publishes, not just our mocks
- *   2. @gateway/oid4vci follows OID4VCI §11.2.2 delegated-authorization
+ *   2. @gramota/oid4vci follows OID4VCI §11.2.2 delegated-authorization
  *      to the EU's Keycloak realm — pulling the right token + authorize
  *      endpoints from the AS metadata
  *   3. Oid4vciClient.authorize() builds an authorization URL the EU's
@@ -22,7 +22,7 @@
 
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 import {
   AUTHORIZATION_CODE_GRANT,
   fetchAuthorizationServerMetadata,
@@ -31,8 +31,8 @@ import {
   resolveTokenEndpoint,
   validateMetadata,
   type IssuerMetadata,
-} from "@gateway/oid4vci";
-import { SdJwtVcIssuerTrustResolver } from "@gateway/trust";
+} from "@gramota/oid4vci";
+import { SdJwtVcIssuerTrustResolver } from "@gramota/trust";
 
 const LIVE = process.env["EUDI_LIVE"] === "1";
 const dlive = LIVE ? describe : describe.skip;
@@ -56,8 +56,8 @@ function offerUrl(offer: object): string {
   return `openid-credential-offer://?credential_offer=${encodeURIComponent(JSON.stringify(offer))}`;
 }
 
-dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
-  it("@gateway/oid4vci.fetchIssuerMetadata succeeds against the EU public issuer", async () => {
+dlive("EUDIW public dev issuer — live E2E driving @gramota/oid4vci", () => {
+  it("@gramota/oid4vci.fetchIssuerMetadata succeeds against the EU public issuer", async () => {
     let metadata: IssuerMetadata;
     try {
       metadata = await fetchIssuerMetadata(ISSUER_BACKEND);
@@ -124,7 +124,7 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
     expect(ases![0]).toContain("eudiw.dev");
   }, 20_000);
 
-  it("@gateway/oid4vci.fetchAuthorizationServerMetadata follows §11.2.2 delegation", async () => {
+  it("@gramota/oid4vci.fetchAuthorizationServerMetadata follows §11.2.2 delegation", async () => {
     const issuerMetadata = await fetchIssuerMetadata(ISSUER_BACKEND);
     const asMetadata =
       await fetchAuthorizationServerMetadata(issuerMetadata);
@@ -283,7 +283,7 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
 
     expect(keys.length).toBeGreaterThan(0);
 
-    // Each key must have the algorithm metadata @gateway/jose needs to verify.
+    // Each key must have the algorithm metadata @gramota/jose needs to verify.
     for (const key of keys) {
       const k = key as Record<string, unknown>;
       expect(k["kty"]).toBeDefined();

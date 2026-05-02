@@ -17,8 +17,8 @@
  * List logic — same wire format we've been using all along.
  */
 
-import type { JsonWebKey } from "@gateway/jose";
-import type { ParsedSdJwt } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import type { ParsedSdJwt } from "@gramota/sd-jwt";
 import { checkCredentialStatus } from "./check.js";
 import { StatusListError, type CredentialStatusResult, type StatusList } from "./types.js";
 import type { Fetcher } from "./fetch.js";

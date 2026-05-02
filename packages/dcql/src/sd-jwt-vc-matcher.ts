@@ -1,9 +1,9 @@
-import type { ParsedSdJwt } from "@gateway/sd-jwt";
+import type { ParsedSdJwt } from "@gramota/sd-jwt";
 import type { DcqlClaimQuery, DcqlCredentialQuery } from "./types.js";
 import { evaluateDcqlPath, leafPropertyName } from "./path.js";
 
 /** A holder-side credential view the matcher consumes. Decoupled from
- * `@gateway/holder`'s StoredCredential for testability. */
+ * `@gramota/holder`'s StoredCredential for testability. */
 export interface SdJwtVcCredentialView {
   parsed: ParsedSdJwt;
 }

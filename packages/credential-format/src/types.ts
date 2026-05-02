@@ -22,8 +22,8 @@
  * Base — every format handler advertises which format strings it claims.
  *
  * Implementations live close to the format-specific logic they wrap (e.g.
- * `SdJwtVcFormatHandler` lives in `@gateway/credential-format-sd-jwt-vc`,
- * future `MDocFormatHandler` in `@gateway/credential-format-mdoc`).
+ * `SdJwtVcFormatHandler` lives in `@gramota/credential-format-sd-jwt-vc`,
+ * future `MDocFormatHandler` in `@gramota/credential-format-mdoc`).
  */
 export interface CredentialFormatHandler {
   /** Format identifiers this handler claims, e.g. ["vc+sd-jwt", "dc+sd-jwt"]. */

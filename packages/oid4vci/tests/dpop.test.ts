@@ -24,7 +24,7 @@ import {
   JwkSigner,
   verifyJws,
   type JsonWebKey,
-} from "@gateway/jose";
+} from "@gramota/jose";
 import { buildDpopJwt, computeAccessTokenHash } from "../src/index.js";
 
 async function makeSigner(): Promise<{ signer: JwkSigner; pub: JsonWebKey }> {

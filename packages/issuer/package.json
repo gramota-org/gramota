@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/issuer",
+  "name": "@gramota/issuer",
   "version": "0.0.0",
   "description": "EUDIW credential issuer — sign SD-JWT-VC credentials with selective disclosure and key binding.",
   "license": "Apache-2.0",
@@ -18,8 +18,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/jose": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*"
+    "@gramota/jose": "workspace:*",
+    "@gramota/sd-jwt": "workspace:*"
   },
   "devDependencies": {
     "jose": "^5.9.6"

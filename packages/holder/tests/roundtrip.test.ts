@@ -7,9 +7,9 @@
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK, importJWK, CompactSign } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { issueSdJwt } from "@gateway/sd-jwt";
-import { Verifier } from "@gateway/verifier";
+import type { JsonWebKey } from "@gramota/jose";
+import { issueSdJwt } from "@gramota/sd-jwt";
+import { Verifier } from "@gramota/verifier";
 import { Holder } from "../src/holder.js";
 
 const NOW = 1_700_000_050;

@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/oid4vp",
+  "name": "@gramota/oid4vp",
   "version": "0.0.0",
   "description": "OpenID for Verifiable Presentations transport — authorization request/response wire format for EUDIW.",
   "license": "Apache-2.0",

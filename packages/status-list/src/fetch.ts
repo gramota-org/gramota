@@ -1,4 +1,4 @@
-import { verifyJws, type JsonWebKey } from "@gateway/jose";
+import { verifyJws, type JsonWebKey } from "@gramota/jose";
 import { parseStatusListToken } from "./parse.js";
 import { StatusListError, type StatusList } from "./types.js";
 

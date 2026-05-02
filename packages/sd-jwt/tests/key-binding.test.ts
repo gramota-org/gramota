@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK, SignJWT } from "jose";
-import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
+import type { JsonWebKey, SupportedAlg } from "@gramota/jose";
 import { issueSdJwt, stubSignature } from "../src/issue.js";
 import { parseSdJwt } from "../src/parse.js";
 import {

@@ -4,7 +4,7 @@ import {
   type JsonWebKey,
   type Signer,
   type SupportedAlg,
-} from "@gateway/jose";
+} from "@gramota/jose";
 import { computeSdHash } from "./sd-hash.js";
 import type { HashAlg } from "./issue.js";
 import type { ParsedSdJwt, VerifiedKeyBinding } from "./types.js";

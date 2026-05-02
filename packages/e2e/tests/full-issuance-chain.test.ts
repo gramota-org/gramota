@@ -1,5 +1,5 @@
 /**
- * Top-to-bottom E2E with @gateway/oid4vci as the transport for issuance:
+ * Top-to-bottom E2E with @gramota/oid4vci as the transport for issuance:
  *
  *   Issuer publishes offer URL                                         (mock HTTP)
  *     → Holder.offers.parse                                             (preview)
@@ -14,11 +14,11 @@
 
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
-import { Holder } from "@gateway/holder";
-import { Verifier } from "@gateway/verifier";
-import { PRE_AUTHORIZED_CODE_GRANT, type Fetcher } from "@gateway/oid4vci";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
+import { Holder } from "@gramota/holder";
+import { Verifier } from "@gramota/verifier";
+import { PRE_AUTHORIZED_CODE_GRANT, type Fetcher } from "@gramota/oid4vci";
 
 const ISSUER_URL = "https://gov.example.com";
 const VCT = "https://credentials.example.com/national_id";

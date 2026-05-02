@@ -1,5 +1,5 @@
 /**
- * Drive @gateway/* libraries against REAL EU public-verifier output.
+ * Drive @gramota/* libraries against REAL EU public-verifier output.
  *
  * The fixture (init-transaction.example.json) is a real init-transaction
  * response the EU publishes in their openapi.json. Every assertion in this
@@ -9,9 +9,9 @@
  * Always runs in CI, no network required.
  *
  * Libraries exercised:
- *   - @gateway/oid4vp        parseAuthorizationRequestSearchParams
- *   - @gateway/presentation-exchange  selectForDefinition matcher
- *   - @gateway/sd-jwt        parser primitives (for the JAR JWS shape)
+ *   - @gramota/oid4vp        parseAuthorizationRequestSearchParams
+ *   - @gramota/presentation-exchange  selectForDefinition matcher
+ *   - @gramota/sd-jwt        parser primitives (for the JAR JWS shape)
  */
 
 import { describe, it, expect } from "vitest";
@@ -21,14 +21,14 @@ import { dirname, join } from "node:path";
 import {
   parseAuthorizationRequestSearchParams,
   type AuthorizationRequest,
-} from "@gateway/oid4vp";
+} from "@gramota/oid4vp";
 import {
   SdJwtVcMatcher,
   selectForDefinition,
   type PresentationDefinition,
-} from "@gateway/presentation-exchange";
-import { parseSdJwt } from "@gateway/sd-jwt";
-import { verifyJwsWithX5c, x5cToPem } from "@gateway/jose";
+} from "@gramota/presentation-exchange";
+import { parseSdJwt } from "@gramota/sd-jwt";
+import { verifyJwsWithX5c, x5cToPem } from "@gramota/jose";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(
@@ -61,7 +61,7 @@ function decodeJarPayload(jar: string): Record<string, unknown> {
 }
 
 /** Convert the JAR's OID4VP fields into a URL-search-param-equivalent form
- * that @gateway/oid4vp's parser consumes. Object-valued fields (like
+ * that @gramota/oid4vp's parser consumes. Object-valued fields (like
  * presentation_definition) get JSON-stringified the same way they would be
  * in a query-string-encoded request. */
 function jarPayloadAsParams(
@@ -75,8 +75,8 @@ function jarPayloadAsParams(
   return out;
 }
 
-describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () => {
-  describe("@gateway/sd-jwt — JWS structural parsing of the JAR", () => {
+describe("EUDIW public verifier — drive @gramota/* against real EU bytes", () => {
+  describe("@gramota/sd-jwt — JWS structural parsing of the JAR", () => {
     it("the EU JAR has a 3-segment compact JWS shape our libraries can read", () => {
       const segments = fixture.request.split(".");
       expect(segments).toHaveLength(3);
@@ -98,7 +98,7 @@ describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () 
     });
   });
 
-  describe("@gateway/oid4vp — parse the inner OID4VP authorization request", () => {
+  describe("@gramota/oid4vp — parse the inner OID4VP authorization request", () => {
     const jarPayload = decodeJarPayload(fixture.request);
     const params = jarPayloadAsParams(jarPayload);
 
@@ -117,7 +117,7 @@ describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () 
       expect(parsed.nonce.length).toBeGreaterThan(0);
     });
 
-    it("@gateway/oid4vp recovers the presentation_definition object intact", () => {
+    it("@gramota/oid4vp recovers the presentation_definition object intact", () => {
       const parsed: AuthorizationRequest =
         parseAuthorizationRequestSearchParams(params);
 
@@ -131,7 +131,7 @@ describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () 
       expect(pd.input_descriptors[0]?.id).toBe("eu.europa.ec.eudi.pid.1");
     });
 
-    it("@gateway/oid4vp validation rejects a tampered EU request (missing nonce)", () => {
+    it("@gramota/oid4vp validation rejects a tampered EU request (missing nonce)", () => {
       const broken = { ...params };
       delete broken["nonce"];
       expect(() => parseAuthorizationRequestSearchParams(broken)).toThrow(
@@ -140,7 +140,7 @@ describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () 
     });
   });
 
-  describe("@gateway/presentation-exchange — match credentials against real EU PD", () => {
+  describe("@gramota/presentation-exchange — match credentials against real EU PD", () => {
     const jarPayload = decodeJarPayload(fixture.request);
     const pd = jarPayload["presentation_definition"] as PresentationDefinition;
 
@@ -173,7 +173,7 @@ describe("EUDIW public verifier — drive @gateway/* against real EU bytes", () 
     });
   });
 
-  describe("@gateway/jose — verify the real EU JAR signature via x5c", () => {
+  describe("@gramota/jose — verify the real EU JAR signature via x5c", () => {
     it("verifyJwsWithX5c successfully verifies the EU JAR signature", async () => {
       const result = await verifyJwsWithX5c(fixture.request);
 

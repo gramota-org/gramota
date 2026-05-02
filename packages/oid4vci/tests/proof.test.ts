@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import { JwkSigner, verifyJws, type JsonWebKey, type Signer } from "@gateway/jose";
+import { JwkSigner, verifyJws, type JsonWebKey, type Signer } from "@gramota/jose";
 import { buildProofJwt } from "../src/index.js";
 
 async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {

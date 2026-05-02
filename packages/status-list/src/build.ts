@@ -1,5 +1,5 @@
 import { deflateSync } from "node:zlib";
-import { signJws, type JsonWebKey, type SupportedAlg } from "@gateway/jose";
+import { signJws, type JsonWebKey, type SupportedAlg } from "@gramota/jose";
 import { StatusListError, type StatusBits } from "./types.js";
 
 export interface BuildStatusListOptions {

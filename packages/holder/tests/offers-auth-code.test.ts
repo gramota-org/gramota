@@ -4,7 +4,7 @@
  * The mock issuer:
  *   1. Serves OID4VCI metadata (incl. authorization_endpoint).
  *   2. Validates the PKCE verifier against the challenge on token exchange.
- *   3. Mints a real SD-JWT-VC bound to the holder via @gateway/issuer.
+ *   3. Mints a real SD-JWT-VC bound to the holder via @gramota/issuer.
  *
  * This exercises the holder's pending-flow cache (state → context),
  * trusted-issuer validation, and the storage round-trip — same as the
@@ -14,12 +14,12 @@
 import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
 import {
   AUTHORIZATION_CODE_GRANT,
   type Fetcher,
-} from "@gateway/oid4vci";
+} from "@gramota/oid4vci";
 import { Holder, HolderError } from "../src/index.js";
 
 const ISSUER_URL = "https://issuer.example.com";

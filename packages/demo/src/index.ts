@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * EUDI Gateway demo CLI — entry point.
+ * Gramota demo CLI — entry point.
  *
- *   eudi-gateway-demo self-loop   Local Issuer → Holder → Verifier roundtrip
- *   eudi-gateway-demo eu-pid      Receive a real EU-signed PID via OID4VCI
- *   eudi-gateway-demo list        Show stored credentials
- *   eudi-gateway-demo help        Print this help
+ *   gramota-demo self-loop   Local Issuer → Holder → Verifier roundtrip
+ *   gramota-demo eu-pid      Receive a real EU-signed PID via OID4VCI
+ *   gramota-demo list        Show stored credentials
+ *   gramota-demo help        Print this help
  *
  * No external CLI parsing dep — argv handling is small enough to do
  * inline. Subcommands are dispatched via a switch on argv[2].
@@ -20,9 +20,9 @@ const COMMANDS = ["self-loop", "eu-pid", "list", "help"] as const;
 type Command = (typeof COMMANDS)[number];
 
 function printHelp(): void {
-  console.log("EUDI Gateway demo CLI");
+  console.log("Gramota demo CLI");
   console.log("");
-  console.log("Usage: eudi-gateway-demo <command>");
+  console.log("Usage: gramota-demo <command>");
   console.log("");
   console.log("Commands:");
   console.log(

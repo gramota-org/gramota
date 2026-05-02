@@ -21,8 +21,8 @@
 import { describe, it, expect } from "vitest";
 import { createHash } from "node:crypto";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
 import {
   Oid4vciClient,
   PRE_AUTHORIZED_CODE_GRANT,

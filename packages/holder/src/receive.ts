@@ -3,12 +3,12 @@ import {
   parseSdJwt,
   verifyHashBinding,
   type ParsedSdJwt,
-} from "@gateway/sd-jwt";
+} from "@gramota/sd-jwt";
 import {
   verifyJws,
   JoseVerificationError,
   type Signer,
-} from "@gateway/jose";
+} from "@gramota/jose";
 import { publicJwksEqual } from "./jwk-equal.js";
 import {
   HolderError,

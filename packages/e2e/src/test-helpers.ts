@@ -6,7 +6,7 @@ import {
   generateKeyPair,
   importJWK,
 } from "jose";
-import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
+import type { JsonWebKey, SupportedAlg } from "@gramota/jose";
 
 export interface KeyPair {
   publicJwk: JsonWebKey;

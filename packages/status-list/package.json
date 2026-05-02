@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/status-list",
+  "name": "@gramota/status-list",
   "version": "0.0.0",
   "description": "IETF Token Status List — credential revocation/suspension checks for SD-JWT-VC.",
   "license": "Apache-2.0",
@@ -18,11 +18,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/jose": "workspace:*",
-    "@gateway/sd-jwt": "workspace:*"
+    "@gramota/jose": "workspace:*",
+    "@gramota/sd-jwt": "workspace:*"
   },
   "devDependencies": {
-    "@gateway/issuer": "workspace:*",
+    "@gramota/issuer": "workspace:*",
     "jose": "^5.9.6"
   }
 }

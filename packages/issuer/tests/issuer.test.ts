@@ -2,8 +2,8 @@
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { parseSdJwt, verifyHashBinding } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import { parseSdJwt, verifyHashBinding } from "@gramota/sd-jwt";
 import { Issuer, IssuerError } from "../src/index.js";
 
 async function makeKey(): Promise<{ pub: JsonWebKey; priv: JsonWebKey }> {

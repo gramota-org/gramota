@@ -2,8 +2,8 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { generateKeyPair, exportJWK, importJWK, CompactSign } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { issueSdJwt } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import { issueSdJwt } from "@gramota/sd-jwt";
 import { Holder, HolderError } from "../src/holder.js";
 
 interface Setup {

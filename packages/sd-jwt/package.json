@@ -1,5 +1,5 @@
 {
-  "name": "@gateway/sd-jwt",
+  "name": "@gramota/sd-jwt",
   "version": "0.0.0",
   "description": "SD-JWT-VC parser and verifier for the EU Digital Identity Wallet.",
   "license": "Apache-2.0",
@@ -18,7 +18,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@gateway/jose": "workspace:*"
+    "@gramota/jose": "workspace:*"
   },
   "devDependencies": {
     "jose": "^5.9.6"

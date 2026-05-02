@@ -3,7 +3,7 @@
  * Spec: OID4VP 2.0 §6 (DCQL).
  *
  * The OID4VP 2.0 replacement for DIF Presentation Exchange v2 (which lives
- * in `@gateway/presentation-exchange`). Both query languages exist; pick
+ * in `@gramota/presentation-exchange`). Both query languages exist; pick
  * whichever your verifier or wallet ecosystem speaks.
  */
 

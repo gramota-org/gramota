@@ -2,12 +2,12 @@
  * File-backed CredentialStore — second concrete impl of the
  * `CredentialStore` Strategy (after `InMemoryCredentialStore`).
  *
- * Persistence: a JSON file at `~/.eudi-gateway-demo/credentials.json`,
+ * Persistence: a JSON file at `~/.gramota-demo/credentials.json`,
  * overwritten atomically on every mutation. Not concurrent-safe — the
  * demo is single-process. For multi-process or production wallets, use
  * SQLite or an encrypted store.
  *
- * Why this lives in @gateway/demo (not @gateway/holder): the holder
+ * Why this lives in @gramota/demo (not @gramota/holder): the holder
  * package stays node:fs-free for browser/RN compat. Storage adapters
  * for the various host environments live alongside the consumers.
  */
@@ -15,13 +15,13 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
-import { parseSdJwt } from "@gateway/sd-jwt";
+import { parseSdJwt } from "@gramota/sd-jwt";
 import type {
   CredentialId,
   CredentialQuery,
   CredentialStore,
   StoredCredential,
-} from "@gateway/holder";
+} from "@gramota/holder";
 
 interface SerializedCredential {
   id: CredentialId;
@@ -37,7 +37,7 @@ export class FileCredentialStore implements CredentialStore {
   constructor(filePath?: string) {
     this.path =
       filePath ??
-      resolve(homedir(), ".eudi-gateway-demo", "credentials.json");
+      resolve(homedir(), ".gramota-demo", "credentials.json");
   }
 
   async add(credential: StoredCredential): Promise<void> {

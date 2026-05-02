@@ -12,9 +12,9 @@
 
 import { describe, it, expect } from "vitest";
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
-import { Issuer } from "@gateway/issuer";
-import { parseSdJwt } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import { Issuer } from "@gramota/issuer";
+import { parseSdJwt } from "@gramota/sd-jwt";
 import {
   StatusListError,
   buildStatusListToken,

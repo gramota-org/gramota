@@ -1,9 +1,9 @@
-import { asSigner, type JsonWebKey, type Signer } from "@gateway/jose";
+import { asSigner, type JsonWebKey, type Signer } from "@gramota/jose";
 import {
   buildAuthorizationResponseBody,
   parseAuthorizationRequestUrl,
   type AuthorizationRequest,
-} from "@gateway/oid4vp";
+} from "@gramota/oid4vp";
 import {
   Oid4vciClient,
   type AcceptOfferOptions,
@@ -13,13 +13,13 @@ import {
   type CredentialOffer,
   type Fetcher,
   type IssuerMetadata,
-} from "@gateway/oid4vci";
+} from "@gramota/oid4vci";
 import {
   buildPresentationSubmission,
   selectForDefinition,
   type PresentationDefinition,
   type SdJwtVcCredentialView,
-} from "@gateway/presentation-exchange";
+} from "@gramota/presentation-exchange";
 import { receiveCredential } from "./receive.js";
 import { buildPresentation } from "./present.js";
 import { InMemoryCredentialStore } from "./store/memory.js";

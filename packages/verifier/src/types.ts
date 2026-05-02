@@ -1,9 +1,9 @@
-import type { JsonWebKey, SupportedAlg } from "@gateway/jose";
-import type { TrustResolver } from "@gateway/trust";
+import type { JsonWebKey, SupportedAlg } from "@gramota/jose";
+import type { TrustResolver } from "@gramota/trust";
 import type {
   CredentialStatusResult,
   StatusResolver,
-} from "@gateway/status-list";
+} from "@gramota/status-list";
 
 /** Configuration for a Verifier instance. */
 export interface VerifierConfig {

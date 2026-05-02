@@ -1,5 +1,5 @@
-import type { JsonWebKey } from "@gateway/jose";
-import type { ParsedSdJwt } from "@gateway/sd-jwt";
+import type { JsonWebKey } from "@gramota/jose";
+import type { ParsedSdJwt } from "@gramota/sd-jwt";
 import { fetchStatusList, type Fetcher } from "./fetch.js";
 import { getStatus } from "./parse.js";
 import {

@@ -4,13 +4,13 @@
 
 import { describe, it, expect } from "vitest";
 import { generateKeyPair, exportJWK, SignJWT } from "jose";
-import type { JsonWebKey } from "@gateway/jose";
+import type { JsonWebKey } from "@gramota/jose";
 import {
   buildKeyBindingJwt,
   computeSdHash,
   issueSdJwt,
   type HashAlg,
-} from "@gateway/sd-jwt";
+} from "@gramota/sd-jwt";
 import { Verifier, verify, inspect, VerificationError } from "../src/index.js";
 
 const AUDIENCE = "https://my-bank.example.com";
@@ -396,7 +396,7 @@ describe("Verifier — configuration", () => {
 
   it("rejects construction with both issuerKey AND trust", async () => {
     const s = await setup();
-    const { StaticTrustResolver } = await import("@gateway/trust");
+    const { StaticTrustResolver } = await import("@gramota/trust");
     expect(
       () =>
         new Verifier({
@@ -409,7 +409,7 @@ describe("Verifier — configuration", () => {
 
   it("accepts a TrustResolver via the trust option", async () => {
     const s = await setup();
-    const { StaticTrustResolver } = await import("@gateway/trust");
+    const { StaticTrustResolver } = await import("@gramota/trust");
     const v = new Verifier({
       audience: AUDIENCE,
       trust: new StaticTrustResolver([s.issuerPub]),
@@ -420,7 +420,7 @@ describe("Verifier — configuration", () => {
 
   it("trust.resolution failure is a distinct check name", async () => {
     const s = await setup();
-    const { StaticTrustResolver } = await import("@gateway/trust");
+    const { StaticTrustResolver } = await import("@gramota/trust");
     // Configured per-issuer for a different iss → resolution will fail.
     const v = new Verifier({
       audience: AUDIENCE,
