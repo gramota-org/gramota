@@ -78,9 +78,16 @@ jobs:
           title: "chore: release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # actions/setup-node@v4 with registry-url writes an .npmrc that
-          # references ${NODE_AUTH_TOKEN}, not ${NPM_TOKEN}. So we must
-          # name the env var to match what the .npmrc expects, otherwise
-          # the token sits in env unused and npm publishes anonymously.
+          # Two env vars, same value. Both are required:
+          # - NPM_TOKEN: changesets/action checks process.env.NPM_TOKEN to
+          #   decide between traditional auth and OIDC trusted publishing.
+          #   Without it, it silently switches to OIDC, which requires the
+          #   package to ALREADY exist on npm with a registered trusted
+          #   publisher — useless for brand-new packages.
+          # - NODE_AUTH_TOKEN: actions/setup-node@v4 with registry-url
+          #   writes an .npmrc referencing ${NODE_AUTH_TOKEN}; npm publish
+          #   reads the token from there. Without it, the .npmrc resolves
+          #   to an empty string and publishes are anonymous.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
