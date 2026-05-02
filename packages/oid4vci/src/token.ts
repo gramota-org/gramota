@@ -1,5 +1,7 @@
+import type { Signer } from "@gateway/jose";
 import { Oid4vciError, type TokenResponse } from "./types.js";
 import type { Fetcher } from "./metadata.js";
+import { postWithDpopRetry } from "./dpop.js";
 
 /** Pre-authorized code grant identifier per OID4VCI §4.1.1. */
 export const PRE_AUTHORIZED_CODE_GRANT =
@@ -11,6 +13,9 @@ export interface RequestTokenOptions {
   /** Transaction code (PIN) when the offer requires one. */
   txCode?: string;
   fetcher?: Fetcher;
+  /** When set, attach a DPoP proof (RFC 9449) to the token request.
+   * The signer is the wallet's holder-binding key. */
+  dpopSigner?: Signer;
 }
 
 /**
@@ -50,24 +55,14 @@ export async function requestToken(
   }
 
   const fetcher = options.fetcher ?? defaultFetcher;
-  let response: Awaited<ReturnType<Fetcher>>;
-  try {
-    response = await fetcher(options.tokenEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: body.toString(),
-    });
-  } catch (err) {
-    throw new Oid4vciError(
-      "oid4vci.token_request_failed",
-      `token request failed: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
-  }
+  const response = await postWithDpopRetry({
+    fetcher,
+    url: options.tokenEndpoint,
+    body: body.toString(),
+    contentType: "application/x-www-form-urlencoded",
+    accept: "application/json",
+    ...(options.dpopSigner !== undefined ? { dpopSigner: options.dpopSigner } : {}),
+  });
   if (!response.ok) {
     let detail = "";
     try {
@@ -118,6 +113,7 @@ const defaultFetcher: Fetcher = (url, init) =>
   fetch(url, init).then((r) => ({
     ok: r.ok,
     status: r.status,
+    headers: r.headers,
     json: () => r.json(),
     text: () => r.text(),
   }));

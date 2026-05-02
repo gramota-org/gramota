@@ -1,5 +1,7 @@
+import type { Signer } from "@gateway/jose";
 import { Oid4vciError, type TokenResponse } from "./types.js";
 import { codeChallenge, generateCodeVerifier, generateState } from "./pkce.js";
+import { postWithDpopRetry } from "./dpop.js";
 import type { Fetcher } from "./metadata.js";
 
 /** OAuth authorization-code grant identifier. */
@@ -275,6 +277,8 @@ export interface RequestTokenAuthCodeOptions {
   clientId: string;
   /** Optional fetcher override. */
   fetcher?: Fetcher;
+  /** When set, attach a DPoP proof (RFC 9449) to the token request. */
+  dpopSigner?: Signer;
 }
 
 /**
@@ -314,24 +318,14 @@ export async function requestTokenAuthCode(
   body.set("client_id", options.clientId);
 
   const fetcher = options.fetcher ?? defaultFetcher;
-  let response: Awaited<ReturnType<Fetcher>>;
-  try {
-    response = await fetcher(options.tokenEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-      },
-      body: body.toString(),
-    });
-  } catch (err) {
-    throw new Oid4vciError(
-      "oid4vci.token_request_failed",
-      `auth-code token request failed: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
-  }
+  const response = await postWithDpopRetry({
+    fetcher,
+    url: options.tokenEndpoint,
+    body: body.toString(),
+    contentType: "application/x-www-form-urlencoded",
+    accept: "application/json",
+    ...(options.dpopSigner !== undefined ? { dpopSigner: options.dpopSigner } : {}),
+  });
   if (!response.ok) {
     let detail = "";
     try {
@@ -455,6 +449,7 @@ const defaultFetcher: Fetcher = (url, init) =>
   fetch(url, init).then((r) => ({
     ok: r.ok,
     status: r.status,
+    headers: r.headers,
     json: () => r.json(),
     text: () => r.text(),
   }));

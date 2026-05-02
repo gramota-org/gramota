@@ -151,6 +151,17 @@ dlive("EUDIW public dev issuer — live E2E driving @gateway/oid4vci", () => {
     );
   }, 20_000);
 
+  it("EU AS metadata advertises DPoP support (RFC 9449 §5.1)", async () => {
+    // Without DPoP advertised, our SDK's auto-detect would skip DPoP.
+    // This canary fires if the EU rolls back DPoP support (which would
+    // be a regression) — we'd want to know.
+    const issuerMetadata = await fetchIssuerMetadata(ISSUER_BACKEND);
+    const asMetadata =
+      await fetchAuthorizationServerMetadata(issuerMetadata);
+    expect(asMetadata.dpop_signing_alg_values_supported).toBeDefined();
+    expect(asMetadata.dpop_signing_alg_values_supported).toContain("ES256");
+  }, 20_000);
+
   it("Oid4vciClient.authorize() pushes a PAR request to the EU AS and gets back a request_uri (full live PAR roundtrip)", async () => {
     // What this proves end-to-end against live EU infrastructure:
     //   1. We resolve issuer metadata

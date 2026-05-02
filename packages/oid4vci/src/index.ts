@@ -24,6 +24,7 @@ export {
   validateMetadata,
   type AuthorizationServerMetadata,
   type Fetcher,
+  type FetcherResponse,
 } from "./metadata.js";
 
 export { buildProofJwt, type BuildProofOptions } from "./proof.js";
@@ -71,6 +72,12 @@ export {
   type AuthorizationTransport,
   type DeliverInput,
 } from "./transport.js";
+
+export {
+  buildDpopJwt,
+  computeAccessTokenHash,
+  type BuildDpopJwtOptions,
+} from "./dpop.js";
 
 export {
   codeChallenge,

@@ -1,14 +1,22 @@
 import { Oid4vciError, type IssuerMetadata } from "./types.js";
 
+/** Minimal response shape — headers are optional but recommended.
+ * Required only for DPoP-Nonce retry (RFC 9449 §8). Adapters bridging
+ * Node's `fetch` or other HTTP libs SHOULD wrap `response.headers` so
+ * the SDK can pick up `DPoP-Nonce` automatically. */
+export interface FetcherResponse {
+  ok: boolean;
+  status: number;
+  /** Read a response header. Names are case-insensitive per HTTP. */
+  headers?: { get(name: string): string | null };
+  json(): Promise<unknown>;
+  text(): Promise<string>;
+}
+
 export type Fetcher = (
   url: string,
   init?: RequestInit,
-) => Promise<{
-  ok: boolean;
-  status: number;
-  json: () => Promise<unknown>;
-  text: () => Promise<string>;
-}>;
+) => Promise<FetcherResponse>;
 
 /**
  * Fetch + validate Issuer Metadata from
@@ -134,6 +142,10 @@ export interface AuthorizationServerMetadata {
   pushed_authorization_request_endpoint?: string;
   /** RFC 9126 — when true, the AS rejects auth requests not pushed via PAR. */
   require_pushed_authorization_requests?: boolean;
+  /** RFC 9449 §5.1 — algorithms the AS accepts for DPoP proofs. When
+   * present and the wallet's signing alg is in the list, our SDK
+   * auto-attaches DPoP proofs to token + credential requests. */
+  dpop_signing_alg_values_supported?: readonly string[];
   /** RFC 7636 — must include "S256" for our PKCE-only flow to work. */
   code_challenge_methods_supported?: readonly string[];
   /** Useful for diagnostics — should include "authorization_code". */
@@ -162,13 +174,19 @@ export async function fetchAuthorizationServerMetadata(
   const fetcher = options.fetcher ?? defaultFetcher;
 
   // Case 1: issuer is its own AS (test/dev mocks, simple issuers).
+  // Triggered when token_endpoint is on the issuer metadata directly —
+  // authorization_endpoint may be absent (pre-auth-only issuers don't
+  // need it) and we synthesize a sensible default.
   const issuerObj = issuerMetadata as Record<string, unknown>;
   const directAuthz = issuerObj["authorization_endpoint"];
   const directToken = issuerMetadata.token_endpoint;
-  if (typeof directAuthz === "string" && typeof directToken === "string") {
+  if (typeof directToken === "string") {
     const result: AuthorizationServerMetadata = {
       issuer: issuerMetadata.credential_issuer,
-      authorization_endpoint: directAuthz,
+      authorization_endpoint:
+        typeof directAuthz === "string"
+          ? directAuthz
+          : stripTrailingSlash(issuerMetadata.credential_issuer) + "/authorize",
       token_endpoint: directToken,
     };
     // Self-hosting issuers may also expose PAR — propagate it.
@@ -185,6 +203,11 @@ export async function fetchAuthorizationServerMetadata(
       result.require_pushed_authorization_requests = issuerObj[
         "require_pushed_authorization_requests"
       ] as boolean;
+    }
+    if (Array.isArray(issuerObj["dpop_signing_alg_values_supported"])) {
+      result.dpop_signing_alg_values_supported = issuerObj[
+        "dpop_signing_alg_values_supported"
+      ] as readonly string[];
     }
     return result;
   }
@@ -233,6 +256,12 @@ export async function fetchAuthorizationServerMetadata(
                   body["require_pushed_authorization_requests"] as boolean,
               }
             : {}),
+          ...(Array.isArray(body["dpop_signing_alg_values_supported"])
+            ? {
+                dpop_signing_alg_values_supported:
+                  body["dpop_signing_alg_values_supported"] as readonly string[],
+              }
+            : {}),
           ...(Array.isArray(body["code_challenge_methods_supported"])
             ? {
                 code_challenge_methods_supported:
@@ -273,6 +302,7 @@ const defaultFetcher: Fetcher = (url, init) =>
   fetch(url, init).then((r) => ({
     ok: r.ok,
     status: r.status,
+    headers: r.headers,
     json: () => r.json(),
     text: () => r.text(),
   }));

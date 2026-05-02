@@ -1,9 +1,11 @@
+import type { Signer } from "@gateway/jose";
 import {
   Oid4vciError,
   type CredentialRequest,
   type CredentialResponse,
 } from "./types.js";
 import type { Fetcher } from "./metadata.js";
+import { postWithDpopRetry } from "./dpop.js";
 
 export interface RequestCredentialOptions {
   credentialEndpoint: string;
@@ -11,11 +13,21 @@ export interface RequestCredentialOptions {
   /** Either `credential_configuration_id` (preferred) or `format`+`vct`. */
   request: CredentialRequest;
   fetcher?: Fetcher;
+  /** When set, the request is sent as `Authorization: DPoP <token>` with
+   * a DPoP proof JWT (RFC 9449) bound to the access token via the `ath`
+   * claim. The proof is signed by this signer. */
+  dpopSigner?: Signer;
 }
 
 /**
  * Send a Credential Request to the issuer's credential endpoint per
  * OID4VCI §7. The request must include a proof JWT — see `buildProofJwt`.
+ *
+ * When `dpopSigner` is supplied, the request is sender-constrained per
+ * RFC 9449: the access token is presented under the `DPoP` scheme and a
+ * `DPoP:` proof header binds the request to the holder's signing key.
+ * The proof's `ath` claim is the SHA-256 of the access token, so a
+ * stolen token can't be replayed by a different key.
  */
 export async function requestCredential(
   options: RequestCredentialOptions,
@@ -43,25 +55,15 @@ export async function requestCredential(
   }
 
   const fetcher = options.fetcher ?? defaultFetcher;
-  let response: Awaited<ReturnType<Fetcher>>;
-  try {
-    response = await fetcher(options.credentialEndpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${options.accessToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(options.request),
-    });
-  } catch (err) {
-    throw new Oid4vciError(
-      "oid4vci.credential_request_failed",
-      `credential request failed: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
-  }
+  const response = await postWithDpopRetry({
+    fetcher,
+    url: options.credentialEndpoint,
+    body: JSON.stringify(options.request),
+    contentType: "application/json",
+    accept: "application/json",
+    bearerToken: options.accessToken,
+    ...(options.dpopSigner !== undefined ? { dpopSigner: options.dpopSigner } : {}),
+  });
   if (!response.ok) {
     let detail = "";
     try {
@@ -110,6 +112,7 @@ const defaultFetcher: Fetcher = (url, init) =>
   fetch(url, init).then((r) => ({
     ok: r.ok,
     status: r.status,
+    headers: r.headers,
     json: () => r.json(),
     text: () => r.text(),
   }));

@@ -92,6 +92,16 @@ export type Oid4vciClientConfig = Oid4vciClientSignerInput & {
    * Default: a registry with `SdJwtVcFormatHandler` pre-registered.
    */
   credentialFormats?: CredentialFormatRegistry;
+  /**
+   * DPoP (RFC 9449) policy. Default: `"auto"` — attach DPoP proofs
+   * when the AS metadata advertises `dpop_signing_alg_values_supported`
+   * including the wallet's signing alg.
+   *
+   * Set `false` to disable DPoP entirely (Bearer tokens only). Set
+   * `true` to force DPoP regardless of metadata — useful when an AS
+   * supports DPoP but doesn't advertise it (rare but spec-allowed).
+   */
+  dpop?: boolean | "auto";
 };
 
 export interface AcceptOfferOptions {
@@ -142,6 +152,8 @@ export class Oid4vciClient {
   private readonly signer: Signer;
   /** Captured fetcher override for ergonomics. */
   private readonly defaultFetcher: Fetcher | undefined;
+  /** DPoP policy: `"auto"` (default), `true`, or `false`. */
+  private readonly dpopPolicy: boolean | "auto";
 
   constructor(config: Oid4vciClientConfig) {
     this.signer = normalizeSignerInput(config);
@@ -150,6 +162,24 @@ export class Oid4vciClient {
     this.credentialFormats =
       config.credentialFormats ?? createDefaultCredentialFormatRegistry();
     this.defaultFetcher = config.fetcher;
+    this.dpopPolicy = config.dpop ?? "auto";
+  }
+
+  /**
+   * Decide whether to attach DPoP proofs to a flow. Respects the policy
+   * setting; in `"auto"` mode, checks the AS metadata for
+   * `dpop_signing_alg_values_supported` and confirms the wallet's
+   * signing alg is in the list.
+   */
+  private shouldUseDpop(asMetadata: AuthorizationServerMetadata): boolean {
+    if (this.dpopPolicy === false) return false;
+    if (this.dpopPolicy === true) return true;
+    // auto
+    const supported = asMetadata.dpop_signing_alg_values_supported;
+    return (
+      Array.isArray(supported) &&
+      supported.includes(this.signer.alg as string)
+    );
   }
 
   /** Pure: parse a credential offer URL without any network I/O. */
@@ -209,6 +239,13 @@ export class Oid4vciClient {
     // an MDocFormatHandler to drive mDoc credentials too.
     const formatHandler = this.requireIssuanceHandler(config.format);
 
+    // Resolve AS metadata so we can auto-detect DPoP support. (For
+    // self-hosting issuers this is a synthetic object, no extra fetch.)
+    const asMetadata = await fetchAuthorizationServerMetadata(metadata, {
+      ...(fetcher !== undefined ? { fetcher } : {}),
+    });
+    const useDpop = this.shouldUseDpop(asMetadata);
+
     // Token request
     const tokenEndpoint = resolveTokenEndpoint(metadata);
     const tokenOpts: Parameters<typeof requestToken>[0] = {
@@ -217,6 +254,7 @@ export class Oid4vciClient {
     };
     if (options.txCode !== undefined) tokenOpts.txCode = options.txCode;
     if (fetcher !== undefined) tokenOpts.fetcher = fetcher;
+    if (useDpop) tokenOpts.dpopSigner = this.signer;
     const tokenResponse = await requestToken(tokenOpts);
 
     // Build proof — delegates the actual signing to the configured Signer.
@@ -230,7 +268,7 @@ export class Oid4vciClient {
     if (options.proofIat !== undefined) proofOpts.iat = options.proofIat;
     const proofJwt = await buildProofJwt(proofOpts);
 
-    // Credential request
+    // Credential request — DPoP-bound when auto-detection said so.
     const credOpts: Parameters<typeof requestCredential>[0] = {
       credentialEndpoint: metadata.credential_endpoint,
       accessToken: tokenResponse.access_token,
@@ -240,6 +278,7 @@ export class Oid4vciClient {
       },
     };
     if (fetcher !== undefined) credOpts.fetcher = fetcher;
+    if (useDpop) credOpts.dpopSigner = this.signer;
     const credResponse = await requestCredential(credOpts);
 
     const credential =
@@ -412,6 +451,7 @@ export class Oid4vciClient {
     // Use the AS's token_endpoint — for delegated AS (EU/Keycloak), the
     // issuer doesn't host /token itself.
     const tokenEndpoint = options.authorizationServerMetadata.token_endpoint;
+    const useDpop = this.shouldUseDpop(options.authorizationServerMetadata);
 
     const tokenOpts: Parameters<typeof requestTokenAuthCode>[0] = {
       tokenEndpoint,
@@ -421,6 +461,7 @@ export class Oid4vciClient {
       clientId: options.clientId,
     };
     if (fetcher !== undefined) tokenOpts.fetcher = fetcher;
+    if (useDpop) tokenOpts.dpopSigner = this.signer;
     const tokenResponse = await requestTokenAuthCode(tokenOpts);
 
     // Build proof JWT — same Signer for the auth-code path.
@@ -434,7 +475,7 @@ export class Oid4vciClient {
     if (options.proofIat !== undefined) proofOpts.iat = options.proofIat;
     const proofJwt = await buildProofJwt(proofOpts);
 
-    // Credential request
+    // Credential request — DPoP-bound when auto-detection said so.
     const credOpts: Parameters<typeof requestCredential>[0] = {
       credentialEndpoint: options.metadata.credential_endpoint,
       accessToken: tokenResponse.access_token,
@@ -444,6 +485,7 @@ export class Oid4vciClient {
       },
     };
     if (fetcher !== undefined) credOpts.fetcher = fetcher;
+    if (useDpop) credOpts.dpopSigner = this.signer;
     const credResponse = await requestCredential(credOpts);
 
     const credential =
