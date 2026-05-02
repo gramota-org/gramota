@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Nightly run includes EUDI_LIVE=1 to catch EU dev-infra changes within a day.
+  schedule:
+    - cron: "0 4 * * *"
+
+jobs:
+  test:
+    name: Test (mock + typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm -r build
+
+      - run: pnpm test
+
+      - run: pnpm typecheck
+
+  live:
+    name: Live (EU dev infra interop)
+    # Run on nightly schedule + on PRs that touch the OID4VCI / verifier /
+    # trust packages — to catch EU spec/infra changes within a day.
+    if: github.event_name == 'schedule' || contains(github.event.pull_request.changed_files || '', 'packages/oid4vci') || contains(github.event.pull_request.changed_files || '', 'packages/trust')
+    runs-on: ubuntu-latest
+    continue-on-error: true  # EU dev infra outages shouldn't block PRs
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm -r build
+
+      - run: pnpm test:live
