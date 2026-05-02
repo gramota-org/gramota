@@ -13,6 +13,8 @@
     "test": "pnpm -r build && vitest run",
     "test:watch": "vitest",
     "test:coverage": "pnpm -r build && vitest run --coverage",
+    "test:live": "pnpm -r build && EUDI_LIVE=1 vitest run packages/e2e/tests/interop/",
+    "test:all": "pnpm -r build && EUDI_LIVE=1 vitest run",
     "typecheck": "pnpm -r build && pnpm -r typecheck",
     "clean": "pnpm -r exec rm -rf dist coverage *.tsbuildinfo",
     "demo": "pnpm --filter @gateway/demo build && node packages/demo/dist/index.js",

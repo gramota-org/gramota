@@ -70,6 +70,44 @@ These principles fall out of the founder's reality (solo engineer, Sofia-based, 
 
 ---
 
+## Testing convention
+
+Tests are split into two tiers. Both tiers MUST be green before any release.
+
+### Tier 1 — fast, deterministic, default
+
+```bash
+pnpm test            # mock + unit + conformance, ~1.5s, no network
+pnpm test:watch      # vitest in watch mode
+pnpm test:coverage   # with coverage report
+```
+
+These are everything in `packages/*/tests/` that doesn't need EU infra. Spec-conformance test vectors (RFC + IETF + EU samples) are in this tier — they're static fixtures, not live calls. CI runs this on every push.
+
+### Tier 2 — live interop, opt-in
+
+```bash
+pnpm test:live       # only the live-EU files: ~2s + network
+pnpm test:all        # mock + live in one go
+```
+
+Files under `packages/e2e/tests/interop/*-live.test.ts` are gated by `EUDI_LIVE=1` (set by the scripts above). They hit:
+
+- `dev.issuer-backend.eudiw.dev` — EU reference PID issuer
+- `dev.authenticate.eudiw.dev` — EU Keycloak realm
+- `dev.verifier-backend.eudiw.dev` — EU reference verifier
+- `issuer.eudiw.dev` — EU status-list service
+
+Why gated: network dependence, EU outage tolerance, keep the default loop deterministic. CI runs Tier 2 nightly + pre-release.
+
+### Discipline
+
+- **Every spec primitive** ships a Tier 1 conformance test using canonical vectors (per principle 9).
+- **Every public-API integration point with EU live infra** ships a Tier 2 canary that fires when the EU rolls back support (we've already caught the DCQL migration, the `dc+sd-jwt` format switch, and the PAR-required-per-client policy this way).
+- A red Tier 2 test means **either we have a regression OR the EU changed something** — both worth knowing about within a day.
+
+---
+
 ## What we are building
 
 ### Open-source layer (the lead magnet)
