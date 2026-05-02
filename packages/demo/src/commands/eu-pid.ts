@@ -36,8 +36,13 @@ import {
   fetchIssuerMetadata,
 } from "@gateway/oid4vci";
 import { SdJwtVcIssuerTrustResolver } from "@gateway/trust";
+import {
+  StatusListResolver,
+  readStatusReference,
+  StatusListError,
+} from "@gateway/status-list";
 import { FileCredentialStore } from "../file-store.js";
-import { divider, fail, info, step, success } from "../ui.js";
+import { divider, fail, info, step, success, warn } from "../ui.js";
 
 const ISSUER_BACKEND = "https://dev.issuer-backend.eudiw.dev";
 // Documented in eudi-srv-pid-issuer realm export (line 1009-1024 of
@@ -229,12 +234,76 @@ export async function runEuPid(): Promise<void> {
     trustedIssuers: resolvedKeys,
   });
 
+  // === Step 8: Status check (IETF Token Status List) ===
+  // EU's status-list service lives on a SEPARATE origin (issuer.eudiw.dev)
+  // and is publicly fetchable. The credential's payload carries a
+  // `status.status_list = { uri, idx }` reference pointing into a list
+  // there. We use the SAME trustedIssuers (resolved above) for the list
+  // signature — the EU dev infra signs both with the same PID issuer key.
+  step(8, "Check revocation/suspension via IETF Token Status List");
+  let statusRef;
+  try {
+    statusRef = readStatusReference(stored.parsed);
+  } catch (err) {
+    if (
+      err instanceof StatusListError &&
+      err.code === "status_list.no_status_reference"
+    ) {
+      warn(
+        "credential has no status reference — issuer didn't opt into " +
+          "revocation tracking. Skipping status check.",
+      );
+      printSuccess(stored, store, /*statusState=*/ "none");
+      return;
+    }
+    throw err;
+  }
+  info(`status URI:   ${statusRef.uri}`);
+  info(`status idx:   ${statusRef.idx}`);
+
+  const statusResolver = new StatusListResolver({
+    trustedIssuers: resolvedKeys,
+  });
+  let statusResult;
+  try {
+    statusResult = await statusResolver.resolveStatus(stored.parsed);
+  } catch (err) {
+    fail(
+      `status resolution failed: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+    info(
+      "tip: this is expected if the EU dev issuer has ISSUER_STATUSLIST_ENABLED=false " +
+        "or if the status list signer key differs from the credential issuer key. " +
+        "The credential is still validated.",
+    );
+    printSuccess(stored, store, /*statusState=*/ "error");
+    return;
+  }
+
+  if (statusResult === "skipped") {
+    info("status: skipped (no resolvable reference)");
+    printSuccess(stored, store, "skipped");
+    return;
+  }
+  info(`status code:  ${statusResult.code}`);
+  info(`status state: ${statusResult.state}`);
+  printSuccess(stored, store, statusResult.state);
+}
+
+function printSuccess(
+  stored: { id: string; issuer: string; parsed: { disclosures: readonly unknown[] } },
+  store: FileCredentialStore,
+  statusState: string,
+): void {
   divider("");
   success("EU PID received, cryptographically validated, and stored");
   info(`stored.id:    ${stored.id}`);
   info(`stored.iss:   ${stored.issuer}`);
   info(`disclosures:  ${stored.parsed.disclosures.length}`);
   info(`store file:   ${store.filePath}`);
+  info(`status:       ${statusState}`);
   info(
     "issuer signature verified ✓ — hash binding verified ✓ — cnf.jwk verified ✓",
   );
