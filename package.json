@@ -8,27 +8,30 @@
   "engines": {
     "node": ">=20"
   },
+  "packageManager": "pnpm@10.29.3",
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r build && vitest run",
+    "build": "turbo run build",
+    "build:force": "turbo run build --force",
+    "test": "turbo run build && vitest run",
     "test:watch": "vitest",
-    "test:coverage": "pnpm -r build && vitest run --coverage",
-    "test:live": "pnpm -r build && EUDI_LIVE=1 vitest run packages/e2e/tests/interop/",
-    "test:all": "pnpm -r build && EUDI_LIVE=1 vitest run",
-    "typecheck": "pnpm -r build && pnpm -r typecheck",
-    "clean": "pnpm -r exec rm -rf dist coverage *.tsbuildinfo",
+    "test:coverage": "turbo run build && vitest run --coverage",
+    "test:live": "turbo run build && EUDI_LIVE=1 vitest run packages/e2e/tests/interop/",
+    "test:all": "turbo run build && EUDI_LIVE=1 vitest run",
+    "typecheck": "turbo run typecheck",
+    "clean": "rm -rf packages/*/dist packages/*/coverage packages/*/*.tsbuildinfo .turbo node_modules/.cache",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm -r build && changeset publish",
-    "demo": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js",
-    "demo:self-loop": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js self-loop",
-    "demo:eu-pid": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js eu-pid",
-    "demo:list": "pnpm --filter @gramota/demo build && node packages/demo/dist/index.js list"
+    "release": "turbo run build && changeset publish",
+    "demo": "turbo run build --filter=@gramota/demo && node packages/demo/dist/index.js",
+    "demo:self-loop": "turbo run build --filter=@gramota/demo && node packages/demo/dist/index.js self-loop",
+    "demo:eu-pid": "turbo run build --filter=@gramota/demo && node packages/demo/dist/index.js eu-pid",
+    "demo:list": "turbo run build --filter=@gramota/demo && node packages/demo/dist/index.js list"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
     "@types/node": "^20.14.0",
     "@vitest/coverage-v8": "^2.1.0",
+    "turbo": "^2.9.7",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
   }

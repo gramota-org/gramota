@@ -1,0 +1,43 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.json",
+        "tsconfig.json",
+        "../../tsconfig.base.json",
+        "package.json"
+      ],
+      "outputs": [
+        "dist/**",
+        "*.tsbuildinfo"
+      ]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "tests/**/*.ts",
+        "tsconfig.json",
+        "../../tsconfig.base.json"
+      ],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build", "build"],
+      "inputs": [
+        "src/**/*.ts",
+        "tests/**/*.ts",
+        "tests/**/fixtures/**",
+        "tsconfig.json",
+        "vitest.config.*"
+      ],
+      "outputs": ["coverage/**"]
+    }
+  }
+}

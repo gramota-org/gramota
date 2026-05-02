@@ -8,6 +8,9 @@ build/
 *.tsbuildinfo
 coverage/
 
+# Turborepo cache
+.turbo/
+
 # EU reference repositories (kept locally, not committed)
 refs/
 
