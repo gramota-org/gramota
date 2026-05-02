@@ -78,5 +78,9 @@ jobs:
           title: "chore: release packages"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # actions/setup-node@v4 with registry-url writes an .npmrc that
+          # references ${NODE_AUTH_TOKEN}, not ${NPM_TOKEN}. So we must
+          # name the env var to match what the .npmrc expects, otherwise
+          # the token sits in env unused and npm publishes anonymously.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
