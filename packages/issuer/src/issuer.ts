@@ -3,6 +3,8 @@ import { issueSdJwt, type HashAlg } from "@gramota/sd-jwt";
 import { asSigner, type JsonWebKey, type Signer } from "@gramota/jose";
 import {
   IssuerError,
+  type BatchIssueEntry,
+  type BatchIssueOptions,
   type IssueOptions,
   type IssueResult,
   type IssuerConfig,
@@ -16,6 +18,12 @@ const DEFAULT_HASH_ALG: HashAlg = "sha-256";
 export interface IssuerCredentialsApi {
   /** Issue a single SD-JWT-VC credential bound to a holder. */
   issue(options: IssueOptions): Promise<IssueResult>;
+  /** Issue N credentials in a batch, one per holder-key entry — the
+   * OID4VCI Draft 14/15 batch flow. The EU reference wallet asks for
+   * `numberOfCredentials = 10` so it can use a fresh credential per
+   * presentation (one-time use, unlinkable). Each entry gets its own
+   * `cnf.jwk`, fresh disclosure salts, and a distinct credentialId. */
+  issueBatch(options: BatchIssueOptions): Promise<readonly IssueResult[]>;
 }
 
 /**
@@ -46,8 +54,8 @@ export class Issuer {
   private readonly typ: string | undefined;
   private readonly hashAlg: HashAlg | undefined;
 
-  /** Credential operations. `issuer.credentials.{issue}(...)`. Mirrors
-   * `holder.credentials.*` for stylistic symmetry across the SDK. */
+  /** Credential operations. `issuer.credentials.{issue,issueBatch}(...)`.
+   * Mirrors `holder.credentials.*` for stylistic symmetry across the SDK. */
   readonly credentials: IssuerCredentialsApi;
 
   constructor(config: IssuerConfig) {
@@ -60,10 +68,11 @@ export class Issuer {
     this.typ = config.typ;
     this.hashAlg = config.hashAlg;
 
-    // Build the namespaced sub-API. `issuer.credentials.issue` and
-    // `issuer.issue` both resolve here — single implementation.
+    // Build the namespaced sub-API. `issuer.credentials.{issue,issueBatch}`
+    // and `issuer.{issue,issueBatch}` both resolve here — single impl per op.
     this.credentials = {
       issue: (options) => this.issueImpl(options),
+      issueBatch: (options) => this.issueBatchImpl(options),
     };
   }
 
@@ -73,6 +82,57 @@ export class Issuer {
    * stable; pick whichever reads better at the call site. */
   async issue(options: IssueOptions): Promise<IssueResult> {
     return this.issueImpl(options);
+  }
+
+  /** Issue N credentials in a batch — OID4VCI Draft 14/15 batch flow.
+   *
+   * Equivalent to `issuer.credentials.issueBatch(options)`. Each entry in
+   * `options.credentials` produces one independent credential bound to
+   * that entry's `holderKey`, with fresh disclosure salts (so two
+   * credentials over the same claims are unlinkable on the wire) and a
+   * distinct credentialId. Shared options (subject, vct, expiry, …)
+   * apply to every credential.
+   *
+   * The EU reference wallet uses this to mint pools of one-time-use
+   * credentials so each presentation reveals a fresh token rather than
+   * a long-lived one. */
+  async issueBatch(
+    options: BatchIssueOptions,
+  ): Promise<readonly IssueResult[]> {
+    return this.issueBatchImpl(options);
+  }
+
+  private async issueBatchImpl(
+    options: BatchIssueOptions,
+  ): Promise<readonly IssueResult[]> {
+    if (!Array.isArray(options.credentials) || options.credentials.length === 0) {
+      throw new IssuerError(
+        "issuer.batch_empty",
+        "issueBatch: credentials must be a non-empty array",
+      );
+    }
+
+    // Pin `issuedAt` once so every credential in the batch reports the same
+    // iat. Without this, two credentials issued in the same logical batch
+    // could differ by a second — fine for spec, awkward for audit logs.
+    const sharedIssuedAt =
+      options.issuedAt ?? Math.floor(Date.now() / 1000);
+
+    // Validate shared shape once via a representative `IssueOptions` (with
+    // a placeholder holderKey from the first entry) so errors like
+    // `disclosable_missing` and `expiry_conflict` surface once with a
+    // clean stack, not N times wrapped in batch noise.
+    const head = options.credentials[0]!;
+    validate(toIssueOptions(options, head, sharedIssuedAt));
+
+    // Issue each credential. We do this sequentially rather than via
+    // Promise.all to keep error reporting deterministic — a failure on
+    // entry 5 reports as "entry 5" and we stop, rather than racing.
+    const results: IssueResult[] = [];
+    for (const entry of options.credentials) {
+      results.push(await this.issueImpl(toIssueOptions(options, entry, sharedIssuedAt)));
+    }
+    return results;
   }
 
   private async issueImpl(options: IssueOptions): Promise<IssueResult> {
@@ -171,6 +231,37 @@ function normalizeIssuerSigner(config: IssuerConfig): Signer {
   throw new TypeError(
     "Issuer: pass either { privateKey, publicKey, alg } (raw shorthand) or { signer } (production)",
   );
+}
+
+/**
+ * Merge shared batch options with one per-credential entry into the
+ * `IssueOptions` shape that `issueImpl` consumes. Pure function — no
+ * side effects — so it's safe to call once per entry in a tight loop.
+ *
+ * Conditional spreads honour `exactOptionalPropertyTypes`: a property is
+ * either set (with a defined value) or absent, never `undefined`.
+ */
+function toIssueOptions(
+  shared: BatchIssueOptions,
+  entry: BatchIssueEntry,
+  sharedIssuedAt: number,
+): IssueOptions {
+  return {
+    subject: shared.subject,
+    vct: shared.vct,
+    holderKey: entry.holderKey,
+    issuedAt: sharedIssuedAt,
+    ...(shared.selectivelyDisclosable !== undefined
+      ? { selectivelyDisclosable: shared.selectivelyDisclosable }
+      : {}),
+    ...(shared.expiresIn !== undefined ? { expiresIn: shared.expiresIn } : {}),
+    ...(shared.expiresAt !== undefined ? { expiresAt: shared.expiresAt } : {}),
+    ...(shared.notBefore !== undefined ? { notBefore: shared.notBefore } : {}),
+    ...(entry.credentialId !== undefined
+      ? { credentialId: entry.credentialId }
+      : {}),
+    ...(entry.status !== undefined ? { status: entry.status } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------

@@ -80,6 +80,56 @@ export interface IssueResult {
   expiresAt: number | undefined;
 }
 
+/**
+ * Per-credential binding for `issueBatch`. Everything that varies *across*
+ * credentials in the batch goes here; everything shared (subject, vct,
+ * expiry, …) sits at the top level of {@link BatchIssueOptions}.
+ */
+export interface BatchIssueEntry {
+  /** Holder's PUBLIC JWK — bound into this credential's `cnf.jwk`. Each
+   * entry must have a distinct holder key for one-time-use unlinkability. */
+  holderKey: JsonWebKey;
+  /** Override the generated credential ID (default: random UUID v4 per entry). */
+  credentialId?: string;
+  /** Per-credential `status` claim — typical use is to allocate a distinct
+   * Token Status List index for each one-time credential so they can be
+   * revoked independently. */
+  status?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Options for `issuer.issueBatch()` (OID4VCI Draft 14/15 batch issuance).
+ *
+ * Shared across the batch: subject, vct, expiry, notBefore, issuedAt,
+ * selectivelyDisclosable.
+ *
+ * Per-credential: `credentials[i]` (holderKey, optional credentialId,
+ * optional status).
+ */
+export interface BatchIssueOptions {
+  /** Claims shared by every credential in the batch. Same semantics as
+   * {@link IssueOptions.subject}. */
+  subject: Readonly<Record<string, unknown>>;
+  /** SD-JWT-VC type identifier — shared across the batch. */
+  vct: string;
+  /** Names of `subject` keys to make selectively disclosable. Validated
+   * once against `subject`; applies to every credential. Each credential
+   * gets fresh random salts (so two credentials over the same data are
+   * unlinkable on the wire). */
+  selectivelyDisclosable?: readonly string[];
+  /** Shared `expiresIn`. Mutually exclusive with `expiresAt`. */
+  expiresIn?: number;
+  /** Shared absolute `expiresAt`. Mutually exclusive with `expiresIn`. */
+  expiresAt?: number;
+  /** Shared `nbf`. */
+  notBefore?: number;
+  /** Shared `iat`. Defaults to `floor(Date.now()/1000)` evaluated *once*
+   * for the whole batch (so every credential reports the same iat). */
+  issuedAt?: number;
+  /** One entry per credential to issue. Length ≥ 1. */
+  credentials: readonly BatchIssueEntry[];
+}
+
 /** Stable codes for `IssuerError`. */
 export type IssuerErrorCode =
   | "issuer.subject_invalid"
@@ -88,7 +138,8 @@ export type IssuerErrorCode =
   | "issuer.expiry_conflict"
   | "issuer.expiry_invalid"
   | "issuer.disclosable_missing"
-  | "issuer.reserved_claim_in_subject";
+  | "issuer.reserved_claim_in_subject"
+  | "issuer.batch_empty";
 
 export class IssuerError extends Error {
   override readonly name = "IssuerError";
