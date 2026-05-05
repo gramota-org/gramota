@@ -13,11 +13,14 @@ Verify, issue, and integrate EUDIW credentials in 20 lines of code.
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)]()
 [![Node](https://img.shields.io/badge/Node-20%2B-brightgreen)]()
 [![Provenance](https://img.shields.io/badge/npm-provenance%20signed-blue?logo=sigstore)](https://www.npmjs.com/package/@gramota/verifier)
+[![Docs](https://img.shields.io/badge/docs-gramota--org.github.io-4f46e5)](https://gramota-org.github.io/site/)
 
 > **v0.2 — verified end-to-end against the EU reference wallet.** Issuance
 > (OID4VCI Draft 15 + DPoP) and verification (OID4VP Final 1.0 + DCQL +
 > signed JAR) both round-trip cleanly with the official EUDIW Android wallet.
-> See [v0.2 highlights](#v02-highlights) below.
+> See [v0.2 highlights](#v02-highlights) below — or jump straight to the
+> [docs site](https://gramota-org.github.io/site/) for getting started,
+> guides, and the auto-generated API reference.
 
 ---
 
@@ -215,7 +218,7 @@ Live tests gated by `EUDI_LIVE=1`. CI runs mock on every push, live nightly.
 ## Project status
 
 - **Phase 0** (foundation): ✅ done — 14 packages (12 published, 2 internal), 579+31 tests
-- **Phase 1** (public launch): 🟡 in progress — ✅ npm v0.2.0 published, ✅ EU reference wallet round-trip on Android, ⏳ docs site, ⏳ launch post
+- **Phase 1** (public launch): 🟡 in progress — ✅ npm v0.2.0 published, ✅ EU reference wallet round-trip on Android, ✅ [docs site live](https://gramota-org.github.io/site/), ⏳ launch post
 - **Phase 2** (downstream): 🗓 future — WordPress / Shopify / Stripe Connect
 
 Strategy and roadmap: [MANIFEST.md](./MANIFEST.md).
