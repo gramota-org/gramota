@@ -30,7 +30,7 @@ function mockFetcher(map: Record<string, unknown | "error" | number>): {
     if (body === undefined) {
       return { ok: false, status: 404, json: async () => ({}) };
     }
-    return { ok: true, status: 200, json: async () => body };
+    return { ok: true, status: 200, json: async () => body, text: async () => "" };
   };
   return { fetcher, calls };
 }

@@ -44,14 +44,12 @@ function mockServer(map: Record<string, MockResponses>): Fetcher {
       return {
         ok: entry.metadataOk ?? (entry.metadataStatus === undefined),
         status: entry.metadataStatus ?? 200,
-        json: async () => entry.metadata,
-      };
+        json: async () => entry.metadata, text: async () => "" };
     }
     return {
       ok: entry.jwksStatus === undefined,
       status: entry.jwksStatus ?? 200,
-      json: async () => entry.jwks,
-    };
+      json: async () => entry.jwks, text: async () => "" };
   };
 }
 

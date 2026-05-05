@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { verifyJws } from "../../src/verify.js";
 import {
-  JoseVerificationError,
+  JoseError,
   type JsonWebKey,
 } from "../../src/types.js";
 
@@ -65,7 +65,7 @@ describe("EU issuer RS256 conformance", () => {
     const tamperedJws = `${headerB64}.${tamperedPayload}.${signature}`;
 
     await expect(verifyJws(tamperedJws, issuerKey)).rejects.toBeInstanceOf(
-      JoseVerificationError,
+      JoseError,
     );
   });
 
@@ -79,7 +79,7 @@ describe("EU issuer RS256 conformance", () => {
     const tamperedJws = `${headerB64}.${payloadB64}.${tamperedSig}`;
 
     await expect(verifyJws(tamperedJws, issuerKey)).rejects.toBeInstanceOf(
-      JoseVerificationError,
+      JoseError,
     );
   });
 
@@ -91,14 +91,14 @@ describe("EU issuer RS256 conformance", () => {
     };
 
     await expect(verifyJws(issuerJws, wrongKey)).rejects.toBeInstanceOf(
-      JoseVerificationError,
+      JoseError,
     );
   });
 
   it("rejects when the verifier's algorithm allowlist excludes RS256", async () => {
     await expect(
       verifyJws(issuerJws, issuerKey, { algorithms: ["ES256"] }),
-    ).rejects.toBeInstanceOf(JoseVerificationError);
+    ).rejects.toBeInstanceOf(JoseError);
   });
 
   it("never permits alg=none, even if the allowlist contains everything else", async () => {
@@ -107,7 +107,7 @@ describe("EU issuer RS256 conformance", () => {
     )}.${issuerJws.split(".")[1]}.`;
 
     await expect(verifyJws(fakeNone, issuerKey)).rejects.toBeInstanceOf(
-      JoseVerificationError,
+      JoseError,
     );
   });
 });

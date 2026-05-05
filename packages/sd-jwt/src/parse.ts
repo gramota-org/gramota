@@ -1,8 +1,9 @@
-import type {
-  ParsedSdJwt,
-  SdJwtDisclosure,
-  SdJwtHeader,
-  SdJwtPayload,
+import {
+  SdJwtError,
+  type ParsedSdJwt,
+  type SdJwtDisclosure,
+  type SdJwtHeader,
+  type SdJwtPayload,
 } from "./types.js";
 
 const TILDE = "~";
@@ -10,16 +11,16 @@ const DOT = ".";
 
 export function parseSdJwt(token: string): ParsedSdJwt {
   if (typeof token !== "string" || token.length === 0) {
-    throw new SdJwtParseError("sd_jwt.parse.invalid_input", "token must be a non-empty string");
+    throw new SdJwtError("sd_jwt.parse.invalid_input", "token must be a non-empty string");
   }
   if (!token.includes(TILDE)) {
-    throw new SdJwtParseError("sd_jwt.parse.missing_separator", "token is missing the SD-JWT '~' separator");
+    throw new SdJwtError("sd_jwt.parse.missing_separator", "token is missing the SD-JWT '~' separator");
   }
 
   const segments = token.split(TILDE);
   const jwtPart = segments[0];
   if (jwtPart === undefined) {
-    throw new SdJwtParseError("sd_jwt.parse.malformed_jwt", "token is missing the JWT segment");
+    throw new SdJwtError("sd_jwt.parse.malformed_jwt", "token is missing the JWT segment");
   }
 
   const trailingSegments = segments.slice(1);
@@ -50,30 +51,9 @@ export function parseSdJwt(token: string): ParsedSdJwt {
   return result;
 }
 
-/** Stable codes for `SdJwtParseError`. */
-export type SdJwtParseErrorCode =
-  | "sd_jwt.parse.invalid_input"
-  | "sd_jwt.parse.missing_separator"
-  | "sd_jwt.parse.malformed_jwt"
-  | "sd_jwt.parse.malformed_header"
-  | "sd_jwt.parse.malformed_payload"
-  | "sd_jwt.parse.malformed_disclosure";
-
-export class SdJwtParseError extends Error {
-  override readonly name = "SdJwtParseError";
-  readonly code: SdJwtParseErrorCode;
-  constructor(
-    code: SdJwtParseErrorCode,
-    message: string,
-    options?: { cause?: unknown },
-  ) {
-    super(message);
-    this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
-  }
-}
+// Failure codes raised by `parseSdJwt` are namespaced `sd_jwt.parse.*`.
+// See `SdJwtErrorCode` in `./types.ts` for the full union of codes
+// raised across the package.
 
 interface ParsedJwt {
   header: SdJwtHeader;
@@ -85,7 +65,7 @@ interface ParsedJwt {
 function parseJwt(jwt: string): ParsedJwt {
   const components = jwt.split(DOT);
   if (components.length !== 3) {
-    throw new SdJwtParseError("sd_jwt.parse.malformed_jwt", "malformed JWT: expected three '.'-separated segments");
+    throw new SdJwtError("sd_jwt.parse.malformed_jwt", "malformed JWT: expected three '.'-separated segments");
   }
   const [headerB64, payloadB64, signature] = components as [
     string,
@@ -93,7 +73,7 @@ function parseJwt(jwt: string): ParsedJwt {
     string,
   ];
   if (headerB64.length === 0 || payloadB64.length === 0) {
-    throw new SdJwtParseError("sd_jwt.parse.malformed_jwt", "malformed JWT: empty header or payload");
+    throw new SdJwtError("sd_jwt.parse.malformed_jwt", "malformed JWT: empty header or payload");
   }
   const header = decodeJson<SdJwtHeader>(headerB64, "header");
   const payload = decodeJson<SdJwtPayload>(payloadB64, "payload");
@@ -139,17 +119,17 @@ function decodeJson<T>(b64: string, label: string): T {
   try {
     parsed = JSON.parse(json);
   } catch {
-    throw new SdJwtParseError(label === "header" ? "sd_jwt.parse.malformed_header" : "sd_jwt.parse.malformed_payload", `${label} is not valid JSON`);
+    throw new SdJwtError(label === "header" ? "sd_jwt.parse.malformed_header" : "sd_jwt.parse.malformed_payload", `${label} is not valid JSON`);
   }
   if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new SdJwtParseError(label === "header" ? "sd_jwt.parse.malformed_header" : "sd_jwt.parse.malformed_payload", `${label} must be a JSON object`);
+    throw new SdJwtError(label === "header" ? "sd_jwt.parse.malformed_header" : "sd_jwt.parse.malformed_payload", `${label} must be a JSON object`);
   }
   return parsed as T;
 }
 
 function decodeBase64UrlUtf8(b64: string, label: string): string {
   if (!isBase64Url(b64)) {
-    throw new SdJwtParseError(label === "header" ? "sd_jwt.parse.malformed_header" : label === "payload" ? "sd_jwt.parse.malformed_payload" : "sd_jwt.parse.malformed_disclosure", `${label} is not valid base64url`);
+    throw new SdJwtError(label === "header" ? "sd_jwt.parse.malformed_header" : label === "payload" ? "sd_jwt.parse.malformed_payload" : "sd_jwt.parse.malformed_disclosure", `${label} is not valid base64url`);
   }
   return Buffer.from(b64, "base64url").toString("utf-8");
 }
@@ -164,15 +144,15 @@ function parseDisclosure(raw: string): SdJwtDisclosure {
   try {
     arr = JSON.parse(json);
   } catch {
-    throw new SdJwtParseError("sd_jwt.parse.malformed_disclosure", "disclosure is not valid JSON");
+    throw new SdJwtError("sd_jwt.parse.malformed_disclosure", "disclosure is not valid JSON");
   }
   if (!Array.isArray(arr)) {
-    throw new SdJwtParseError("sd_jwt.parse.malformed_disclosure", "disclosure must be a JSON array");
+    throw new SdJwtError("sd_jwt.parse.malformed_disclosure", "disclosure must be a JSON array");
   }
   if (arr.length === 3) {
     const [salt, name, value] = arr;
     if (typeof salt !== "string" || typeof name !== "string") {
-      throw new SdJwtParseError(
+      throw new SdJwtError(
         "sd_jwt.parse.malformed_disclosure",
         "object disclosure must be [salt:string, name:string, value]",
       );
@@ -182,14 +162,14 @@ function parseDisclosure(raw: string): SdJwtDisclosure {
   if (arr.length === 2) {
     const [salt, value] = arr;
     if (typeof salt !== "string") {
-      throw new SdJwtParseError(
+      throw new SdJwtError(
         "sd_jwt.parse.malformed_disclosure",
         "array-element disclosure must be [salt:string, value]",
       );
     }
     return { raw, salt, name: null, value };
   }
-  throw new SdJwtParseError(
+  throw new SdJwtError(
     "sd_jwt.parse.malformed_disclosure",
     "disclosure must have arity 2 (array element) or 3 (object property)",
   );

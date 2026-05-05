@@ -1,22 +1,10 @@
+import type { Fetcher, FetcherResponse } from "@gramota/jose";
 import { Oid4vciError, type IssuerMetadata } from "./types.js";
 
-/** Minimal response shape — headers are optional but recommended.
- * Required only for DPoP-Nonce retry (RFC 9449 §8). Adapters bridging
- * Node's `fetch` or other HTTP libs SHOULD wrap `response.headers` so
- * the SDK can pick up `DPoP-Nonce` automatically. */
-export interface FetcherResponse {
-  ok: boolean;
-  status: number;
-  /** Read a response header. Names are case-insensitive per HTTP. */
-  headers?: { get(name: string): string | null };
-  json(): Promise<unknown>;
-  text(): Promise<string>;
-}
-
-export type Fetcher = (
-  url: string,
-  init?: RequestInit,
-) => Promise<FetcherResponse>;
+// Re-export so existing consumers of `@gramota/oid4vci` keep working
+// without a separate import from `@gramota/jose`. The canonical home of
+// these types is `@gramota/jose`; re-exporting is purely a convenience.
+export type { Fetcher, FetcherResponse };
 
 /**
  * Fetch + validate Issuer Metadata from

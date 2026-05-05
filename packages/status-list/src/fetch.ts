@@ -1,15 +1,10 @@
-import { verifyJws, type JsonWebKey } from "@gramota/jose";
+import { verifyJws, type Fetcher, type JsonWebKey } from "@gramota/jose";
 import { parseStatusListToken } from "./parse.js";
 import { StatusListError, type StatusList } from "./types.js";
 
-export type Fetcher = (
-  url: string,
-  init?: RequestInit,
-) => Promise<{
-  ok: boolean;
-  status: number;
-  text: () => Promise<string>;
-}>;
+// Re-export so existing consumers don't need a separate import from
+// `@gramota/jose`. Canonical home is `@gramota/jose`.
+export type { Fetcher };
 
 export interface FetchStatusListOptions {
   /** Override fetch — for tests. */
@@ -121,6 +116,8 @@ const defaultFetcher: Fetcher = (url, init) =>
   fetch(url, init).then((r) => ({
     ok: r.ok,
     status: r.status,
+    headers: r.headers,
+    json: () => r.json(),
     text: () => r.text(),
   }));
 

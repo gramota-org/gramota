@@ -1,4 +1,4 @@
-export { Issuer } from "./issuer.js";
+export { Issuer, type IssuerCredentialsApi } from "./issuer.js";
 export {
   IssuerError,
   type IssuerConfig,

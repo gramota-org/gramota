@@ -19,6 +19,15 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@gramota/jose": "workspace:*",
+    "@peculiar/x509": "^2.0.0",
+    "jose": "^5.9.6",
+    "reflect-metadata": "^0.2.0"
+  },
+  "sideEffects": [
+    "./dist/cert.js"
+  ],
   "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
   "homepage": "https://github.com/gramota-org/gramota#readme",
   "bugs": {
@@ -27,7 +36,6 @@
   "engines": {
     "node": ">=20"
   },
-  "sideEffects": false,
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"

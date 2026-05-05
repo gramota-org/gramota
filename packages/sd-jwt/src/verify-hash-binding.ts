@@ -1,31 +1,16 @@
 import { createHash } from "node:crypto";
-import type {
-  ParsedSdJwt,
-  SdJwtDisclosure,
-  VerifiedSdJwt,
+import {
+  SdJwtError,
+  type ParsedSdJwt,
+  type SdJwtDisclosure,
+  type VerifiedSdJwt,
 } from "./types.js";
 
 const DEFAULT_HASH_ALG = "sha-256";
 
-/** Stable codes for `SdJwtVerificationError`. */
-export type SdJwtVerificationErrorCode =
-  | "sd_jwt.verify.unsupported_hash_alg";
-
-export class SdJwtVerificationError extends Error {
-  override readonly name = "SdJwtVerificationError";
-  readonly code: SdJwtVerificationErrorCode;
-  constructor(
-    code: SdJwtVerificationErrorCode,
-    message: string,
-    options?: { cause?: unknown },
-  ) {
-    super(message);
-    this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
-  }
-}
+// Failure codes raised by `verifyHashBinding` are namespaced
+// `sd_jwt.verify.*`. See `SdJwtErrorCode` in `./types.ts` for the full
+// union of codes raised across the package.
 
 /**
  * Verify the hash binding between disclosures and the issuer's `_sd` digests,
@@ -150,7 +135,7 @@ function toNodeHashAlgorithm(alg: string): string {
     case "sha-512":
       return "sha512";
     default:
-      throw new SdJwtVerificationError(
+      throw new SdJwtError(
         "sd_jwt.verify.unsupported_hash_alg",
         `unsupported _sd_alg: ${alg}`,
       );

@@ -1,6 +1,6 @@
 import { X509Certificate } from "node:crypto";
 import {
-  JoseVerificationError,
+  JoseError,
   type JsonWebKey,
 } from "./types.js";
 
@@ -12,7 +12,7 @@ import {
  */
 export function x5cToPem(x5cEntry: string): string {
   if (typeof x5cEntry !== "string" || x5cEntry.length === 0) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_parse_failed",
       "x5c entry must be a non-empty base64 string",
     );
@@ -28,7 +28,7 @@ export function parseX5cEntry(x5cEntry: string): X509Certificate {
   try {
     return new X509Certificate(x5cToPem(x5cEntry));
   } catch (err) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_parse_failed",
       `failed to parse x5c entry: ${
         err instanceof Error ? err.message : String(err)
@@ -47,13 +47,13 @@ export function extractPublicKeyFromX5c(
   x5c: readonly string[],
 ): JsonWebKey {
   if (!Array.isArray(x5c)) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_missing",
       "x5c is missing or not an array",
     );
   }
   if (x5c.length === 0) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_empty",
       "x5c is an empty array",
     );
@@ -91,7 +91,7 @@ export interface ChainValidationResult {
  *   2. Each cert is cryptographically signed by the next in `x5c`.
  *   3. The last cert in `x5c` is signed by (or equal to) one of `trustAnchors`.
  *
- * Throws `JoseVerificationError` with `code: "jose.x5c_chain_invalid"` or
+ * Throws `JoseError` with `code: "jose.x5c_chain_invalid"` or
  * `"jose.x5c_no_trust_anchor"` if validation fails.
  *
  * Returns the leaf certificate (for further inspection) and the trust anchor
@@ -102,7 +102,7 @@ export function validateX5cChain(
   options: ChainValidationOptions,
 ): ChainValidationResult {
   if (!Array.isArray(x5c) || x5c.length === 0) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_empty",
       "x5c is empty",
     );
@@ -111,7 +111,7 @@ export function validateX5cChain(
     !Array.isArray(options.trustAnchors) ||
     options.trustAnchors.length === 0
   ) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.invalid_input",
       "validateX5cChain: trustAnchors must be a non-empty array of PEM strings",
     );
@@ -125,13 +125,13 @@ export function validateX5cChain(
     const notBefore = new Date(c.validFrom);
     const notAfter = new Date(c.validTo);
     if (notBefore > now) {
-      throw new JoseVerificationError(
+      throw new JoseError(
         "jose.x5c_chain_invalid",
         `certificate not yet valid: ${c.subject} (validFrom=${c.validFrom})`,
       );
     }
     if (notAfter < now) {
-      throw new JoseVerificationError(
+      throw new JoseError(
         "jose.x5c_chain_invalid",
         `certificate expired: ${c.subject} (validTo=${c.validTo})`,
       );
@@ -143,7 +143,7 @@ export function validateX5cChain(
     const child = certs[i]!;
     const parent = certs[i + 1]!;
     if (!child.verify(parent.publicKey)) {
-      throw new JoseVerificationError(
+      throw new JoseError(
         "jose.x5c_chain_invalid",
         `certificate at x5c[${i}] is not signed by x5c[${i + 1}]`,
       );
@@ -165,7 +165,7 @@ export function validateX5cChain(
     }
   }
 
-  throw new JoseVerificationError(
+  throw new JoseError(
     "jose.x5c_no_trust_anchor",
     `chain does not lead to any of the ${anchorCerts.length} trust anchor(s)`,
   );

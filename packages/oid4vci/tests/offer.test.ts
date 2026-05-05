@@ -3,8 +3,8 @@ import {
   Oid4vciError,
   parseCredentialOffer,
   parseOfferJson,
-  preAuthorizedCodeFrom,
-  txCodeRequirementFrom,
+  extractPreAuthorizedCode,
+  extractTxCodeRequirement,
   type CredentialOffer,
 } from "../src/index.js";
 
@@ -112,9 +112,9 @@ describe("parseOfferJson", () => {
   });
 });
 
-describe("preAuthorizedCodeFrom", () => {
+describe("extractPreAuthorizedCode", () => {
   it("returns the pre-authorized_code when present", () => {
-    expect(preAuthorizedCodeFrom(validOffer)).toBe("AbC123Xyz");
+    expect(extractPreAuthorizedCode(validOffer)).toBe("AbC123Xyz");
   });
 
   it("returns null when only authorization_code grant is present", () => {
@@ -123,7 +123,7 @@ describe("preAuthorizedCodeFrom", () => {
       credential_configuration_ids: ["x"],
       grants: { authorization_code: { issuer_state: "abc" } },
     };
-    expect(preAuthorizedCodeFrom(offer)).toBeNull();
+    expect(extractPreAuthorizedCode(offer)).toBeNull();
   });
 
   it("returns null when no grants are specified", () => {
@@ -131,11 +131,11 @@ describe("preAuthorizedCodeFrom", () => {
       credential_issuer: "https://x.com",
       credential_configuration_ids: ["x"],
     };
-    expect(preAuthorizedCodeFrom(offer)).toBeNull();
+    expect(extractPreAuthorizedCode(offer)).toBeNull();
   });
 });
 
-describe("txCodeRequirementFrom", () => {
+describe("extractTxCodeRequirement", () => {
   it("returns the tx_code requirement when the issuer demands one", () => {
     const offer: CredentialOffer = {
       credential_issuer: "https://x.com",
@@ -147,7 +147,7 @@ describe("txCodeRequirementFrom", () => {
         },
       },
     };
-    const req = txCodeRequirementFrom(offer);
+    const req = extractTxCodeRequirement(offer);
     expect(req).toEqual({
       input_mode: "numeric",
       length: 6,
@@ -156,6 +156,6 @@ describe("txCodeRequirementFrom", () => {
   });
 
   it("returns null when no tx_code is required", () => {
-    expect(txCodeRequirementFrom(validOffer)).toBeNull();
+    expect(extractTxCodeRequirement(validOffer)).toBeNull();
   });
 });

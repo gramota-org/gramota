@@ -2,14 +2,12 @@ import {
   parseSdJwt,
   verifyHashBinding,
   verifyKeyBinding,
-  SdJwtParseError,
-  SdJwtVerificationError,
-  SdJwtKeyBindingError,
+  SdJwtError,
   type ParsedSdJwt,
 } from "@gramota/sd-jwt";
 import {
   verifyJws,
-  JoseVerificationError,
+  JoseError,
   type JsonWebKey,
   type SupportedAlg,
 } from "@gramota/jose";
@@ -29,7 +27,7 @@ import type {
   StatusResolver,
 } from "@gramota/status-list";
 import {
-  VerificationError,
+  VerifierError,
   type FailureResult,
   type SecurityCheck,
   type SecurityCheckName,
@@ -44,6 +42,7 @@ const DEFAULT_CLOCK_SKEW_S = 30;
 
 export class Verifier {
   private readonly audience: string;
+  private readonly additionalAudiences: readonly string[];
   private readonly trust: TrustResolver;
   private readonly statusResolver: StatusResolver | undefined;
   private readonly algorithms: readonly SupportedAlg[] | undefined;
@@ -73,6 +72,7 @@ export class Verifier {
     }
 
     this.audience = config.audience;
+    this.additionalAudiences = config.additionalAudiences ?? [];
     this.trust = hasTrust
       ? (config.trust as TrustResolver)
       : new StaticTrustResolver([config.issuerKey as JsonWebKey]);
@@ -192,8 +192,12 @@ export class Verifier {
     // 4-9. KB-JWT (presence, cnf, signature, aud, nonce, time, transcript)
     let verifiedKb;
     try {
+      const acceptedAud =
+        this.additionalAudiences.length > 0
+          ? [this.audience, ...this.additionalAudiences]
+          : this.audience;
       const kbOpts: Parameters<typeof verifyKeyBinding>[1] = {
-        expectedAudience: this.audience,
+        expectedAudience: acceptedAud,
         expectedNonce: options.nonce,
         maxAgeSeconds: this.maxKbJwtAgeSeconds,
         maxClockSkewSeconds: this.maxClockSkewSeconds,
@@ -461,18 +465,6 @@ export interface VerifyResponseOptions {
   requireStatus?: boolean;
 }
 
-/** Standalone one-off verification — same semantics as Verifier.verify, but
- * no instance to keep around. Pass everything inline. */
-export async function verify<TClaims = Record<string, unknown>>(
-  presentationToken: string,
-  options: VerifyOptions & VerifierConfig,
-): Promise<VerifyResult<TClaims>> {
-  const { nonce, ...config } = options;
-  const verifyOpts: VerifyOptions = { nonce };
-  if (options.now !== undefined) verifyOpts.now = options.now;
-  return new Verifier(config).verify<TClaims>(presentationToken, verifyOpts);
-}
-
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
@@ -501,7 +493,7 @@ function makeFailure(
     failedCheck,
     checks: Object.freeze(checks),
     unwrap: () => {
-      throw new VerificationError(reason, failure);
+      throw new VerifierError(reason, failure);
     },
   };
   return failure;
@@ -525,10 +517,8 @@ function classifyKbFailure(err: unknown): SecurityCheckName {
 
 function describe(err: unknown): string {
   if (
-    err instanceof SdJwtParseError ||
-    err instanceof SdJwtVerificationError ||
-    err instanceof SdJwtKeyBindingError ||
-    err instanceof JoseVerificationError ||
+    err instanceof SdJwtError ||
+    err instanceof JoseError ||
     err instanceof TrustResolutionError ||
     err instanceof Error
   ) {

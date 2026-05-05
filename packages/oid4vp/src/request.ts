@@ -14,9 +14,32 @@ const JSON_FIELDS = new Set<string>([
  * Serialise an Authorization Request to a URL with query parameters per
  * OID4VP §5.1 (parameter encoding rules).
  *
- * The base URL is typically `https://wallet.example.com/authorize` for web
- * flows or a custom scheme like `openid4vp://`. Both work — we just append
- * the query string.
+ * The base URL is typically a custom scheme like `openid4vp://` for the
+ * native wallet handoff, or `https://wallet.example.com/authorize` for
+ * web flows — both work, the function just appends the query string.
+ *
+ * Object-valued parameters (`presentation_definition`, `dcql_query`,
+ * `client_metadata`) are JSON-encoded into the query string per §5.1.
+ *
+ * For HAIP / EUDIW-compliant verifiers, this output is typically wrapped
+ * in a signed JAR (RFC 9101) via {@link signAuthorizationRequest} and
+ * delivered as `request=<jwt>` rather than as raw query params.
+ *
+ * @example
+ * ```ts
+ * const url = buildAuthorizationRequestUrl("openid4vp://", {
+ *   response_type: "vp_token",
+ *   client_id: "x509_san_dns:verifier.example",
+ *   nonce: "n-12345",
+ *   response_mode: "direct_post",
+ *   response_uri: "https://verifier.example/oid4vp/response",
+ *   dcql_query: { credentials: [{ id: "pid", format: "dc+sd-jwt", meta: {...} }] },
+ * });
+ * ```
+ *
+ * @throws {@link Oid4vpError} `oid4vp.required_field_missing`,
+ *   `oid4vp.unsupported_response_type`, `oid4vp.mutually_exclusive_fields`,
+ *   `oid4vp.response_uri_required`, or `oid4vp.invalid_value_type`.
  */
 export function buildAuthorizationRequestUrl(
   baseUrl: string,
@@ -41,7 +64,17 @@ export function buildAuthorizationRequestUrl(
   return url.toString();
 }
 
-/** Parse an OID4VP Authorization Request from a URL string. */
+/**
+ * Parse an OID4VP Authorization Request from a URL string.
+ *
+ * Inverse of {@link buildAuthorizationRequestUrl}. Validates required
+ * fields and mutually-exclusive flag combinations; does NOT verify a
+ * signed JAR (use the wallet's JWS verification step for that, then
+ * call this function on the JAR's payload claims).
+ *
+ * @throws {@link Oid4vpError} with `oid4vp.invalid_url`,
+ *   `oid4vp.required_field_missing`, or other field-validation codes.
+ */
 export function parseAuthorizationRequestUrl(
   rawUrl: string,
 ): AuthorizationRequest {
@@ -58,8 +91,17 @@ export function parseAuthorizationRequestUrl(
 }
 
 /**
- * Parse from a `URLSearchParams` (or anything that quacks like one) — useful
- * when the verifier already has a parsed `req.query` from Express, Hono, etc.
+ * Parse an OID4VP Authorization Request from URL query parameters.
+ *
+ * Useful when the verifier already has parsed query params from a web
+ * framework (`req.query` from Express, Hono, Fastify, ...). Accepts
+ * either a `URLSearchParams` instance or a plain `Record<string, string>`.
+ *
+ * Object-valued params (`presentation_definition`, `dcql_query`,
+ * `client_metadata`) are JSON-decoded; everything else is left as-is.
+ *
+ * @throws {@link Oid4vpError} with `oid4vp.invalid_json` if a JSON-valued
+ *   param is malformed, plus the standard field-validation codes.
  */
 export function parseAuthorizationRequestSearchParams(
   params: URLSearchParams | Record<string, string>,

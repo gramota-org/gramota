@@ -43,8 +43,7 @@ function mockServer(map: Record<string, string>): Fetcher {
     return {
       ok: true,
       status: 200,
-      text: async () => body,
-    };
+      text: async () => body, json: async () => undefined };
   };
 }
 

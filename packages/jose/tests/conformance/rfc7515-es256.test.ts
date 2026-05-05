@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { importJWK, SignJWT } from "jose";
 import { verifyJws } from "../../src/verify.js";
-import { JoseVerificationError, type JsonWebKey } from "../../src/types.js";
+import { JoseError, type JsonWebKey } from "../../src/types.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const vector = JSON.parse(
@@ -49,7 +49,7 @@ describe("RFC 7515 §A.3 ES256 conformance", () => {
     const jws = await signWithRfcKey();
     await expect(
       verifyJws(jws, vector.publicKey, { algorithms: ["RS256"] }),
-    ).rejects.toBeInstanceOf(JoseVerificationError);
+    ).rejects.toBeInstanceOf(JoseError);
   });
 
   it("accepts ES256 when allowlist explicitly includes it", async () => {

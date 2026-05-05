@@ -13,8 +13,8 @@ export {
 export {
   parseCredentialOffer,
   parseOfferJson,
-  preAuthorizedCodeFrom,
-  txCodeRequirementFrom,
+  extractPreAuthorizedCode,
+  extractTxCodeRequirement,
 } from "./offer.js";
 
 export {
@@ -76,8 +76,17 @@ export {
 export {
   buildDpopJwt,
   computeAccessTokenHash,
+  verifyDpopJwt,
   type BuildDpopJwtOptions,
+  type VerifyDpopJwtOptions,
+  type VerifyDpopJwtResult,
 } from "./dpop.js";
+
+export {
+  buildSubdomainIssuerUrl,
+  parseCredentialRequest,
+  type ParseCredentialRequestOptions,
+} from "./server.js";
 
 export {
   codeChallenge,

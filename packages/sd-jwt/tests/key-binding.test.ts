@@ -13,10 +13,9 @@ import { parseSdJwt } from "../src/parse.js";
 import {
   buildKeyBindingJwt,
   verifyKeyBinding,
-  SdJwtKeyBindingError,
 } from "../src/key-binding.js";
 import { computeSdHash } from "../src/sd-hash.js";
-import type { ParsedSdJwt } from "../src/types.js";
+import { SdJwtError, type ParsedSdJwt } from "../src/types.js";
 
 const AUD = "https://verifier.example.com";
 const NONCE = "n-0S6_WzA2Mj-rand-12345";
@@ -210,7 +209,7 @@ describe("KB-JWT rule 2 — signing key MUST be cnf.jwk", () => {
 
     await expect(
       verifyKeyBinding(s.parsed, baseRequirements()),
-    ).rejects.toBeInstanceOf(SdJwtKeyBindingError);
+    ).rejects.toBeInstanceOf(SdJwtError);
   });
 
   it("rejects when parent SD-JWT has no cnf claim", async () => {
@@ -274,7 +273,7 @@ describe("KB-JWT rule 3 — alg constraints", () => {
         ...baseRequirements(),
         algorithms: ["RS256"],
       }),
-    ).rejects.toBeInstanceOf(SdJwtKeyBindingError);
+    ).rejects.toBeInstanceOf(SdJwtError);
   });
 
   it("accepts when alg explicitly allowed", async () => {

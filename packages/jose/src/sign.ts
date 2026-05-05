@@ -1,6 +1,6 @@
 import { CompactSign, importJWK } from "jose";
 import {
-  JoseVerificationError,
+  JoseError,
   type JsonWebKey,
   type SupportedAlg,
 } from "./types.js";
@@ -35,7 +35,7 @@ export async function signJws(
     typeof payload !== "object" ||
     Array.isArray(payload)
   ) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.invalid_input",
       "payload must be a JSON object",
     );
@@ -45,7 +45,7 @@ export async function signJws(
     options.alg.length === 0 ||
     options.alg.toLowerCase() === "none"
   ) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.alg_none_disallowed",
       "alg is required and cannot be 'none'",
     );
@@ -65,7 +65,7 @@ export async function signJws(
       options.alg,
     );
   } catch (err) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.key_import_failed",
       `failed to import private JWK: ${describe(err)}`,
     );
@@ -77,7 +77,7 @@ export async function signJws(
       .setProtectedHeader(header as Parameters<CompactSign["setProtectedHeader"]>[0])
       .sign(key);
   } catch (err) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.signing_failed",
       `signing failed: ${describe(err)}`,
     );

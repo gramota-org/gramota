@@ -11,7 +11,7 @@ import {
   issueSdJwt,
   type HashAlg,
 } from "@gramota/sd-jwt";
-import { Verifier, verify, inspect, VerificationError } from "../src/index.js";
+import { Verifier, inspect, VerifierError } from "../src/index.js";
 
 const AUDIENCE = "https://my-bank.example.com";
 const NONCE = "nonce-abcdefg-1234567890";
@@ -188,16 +188,6 @@ describe("Verifier — happy path", () => {
     expect(name).toBe("John");
   });
 
-  it("works as a standalone verify() function (no class)", async () => {
-    const s = await setup();
-    const result = await verify(s.presentationToken, {
-      audience: AUDIENCE,
-      issuerKey: s.issuerPub,
-      nonce: NONCE,
-      now: () => NOW_S,
-    });
-    expect(result.ok).toBe(true);
-  });
 });
 
 // ===========================================================================
@@ -212,17 +202,17 @@ describe("VerifyResult.unwrap()", () => {
     expect(claims["given_name"]).toBe("John");
   });
 
-  it("throws VerificationError on failure", async () => {
+  it("throws VerifierError on failure", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
     const result = await v.verify(s.presentationToken, {
       ...baseOpts(),
       nonce: "wrong-nonce",
     });
-    expect(() => result.unwrap()).toThrow(VerificationError);
+    expect(() => result.unwrap()).toThrow(VerifierError);
   });
 
-  it("VerificationError carries the failure result for logging", async () => {
+  it("VerifierError carries the failure result for logging", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
     const result = await v.verify(s.presentationToken, {
@@ -233,8 +223,8 @@ describe("VerifyResult.unwrap()", () => {
       result.unwrap();
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(VerificationError);
-      const ve = err as VerificationError;
+      expect(err).toBeInstanceOf(VerifierError);
+      const ve = err as VerifierError;
       expect(ve.result.ok).toBe(false);
       expect(ve.result.failedCheck).toBe("kb-jwt.nonce");
     }

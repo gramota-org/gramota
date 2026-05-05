@@ -14,11 +14,11 @@
  */
 
 import { describe, it, expect } from "vitest";
+import { mockFetcherResponse, type Fetcher } from "@gramota/jose";
 import { issueSdJwt } from "@gramota/sd-jwt";
 import {
   StaticTrustResolver,
   JwksUrlTrustResolver,
-  type Fetcher,
 } from "@gramota/trust";
 import { Holder } from "@gramota/holder";
 import { Verifier } from "@gramota/verifier";
@@ -286,13 +286,9 @@ describe("E2E scenario 4 — JwksUrlTrustResolver with mock HTTP", () => {
     const fetcher: Fetcher = async (url) => {
       fetchCalls++;
       if (url !== issuerJwksUrl) {
-        return { ok: false, status: 404, json: async () => ({}) };
+        return mockFetcherResponse({ ok: false, status: 404, json: {} });
       }
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ keys: [issuer.publicJwk] }),
-      };
+      return mockFetcherResponse({ json: { keys: [issuer.publicJwk] } });
     };
 
     const { token: issued } = await issueSdJwt({

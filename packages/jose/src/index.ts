@@ -1,5 +1,11 @@
 export { verifyJws } from "./verify.js";
 export { verifyJwsWithX5c } from "./verify-x5c.js";
+export { computeJwkThumbprint } from "./thumbprint.js";
+export {
+  mockFetcherResponse,
+  type Fetcher,
+  type FetcherResponse,
+} from "./fetcher.js";
 export type {
   VerifyJwsX5cOptions,
   VerifiedJwsWithX5c,
@@ -30,4 +36,4 @@ export type {
   VerifyJwsOptions,
   VerifiedJws,
 } from "./types.js";
-export { JoseVerificationError } from "./types.js";
+export { JoseError } from "./types.js";

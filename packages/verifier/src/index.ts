@@ -1,4 +1,4 @@
-export { Verifier, verify } from "./verifier.js";
+export { Verifier } from "./verifier.js";
 export type {
   PresentationRequestOptions,
   PresentationRequest,
@@ -6,7 +6,7 @@ export type {
   VerifyResponseResult,
 } from "./verifier.js";
 export { inspect } from "./inspect.js";
-export { VerificationError } from "./types.js";
+export { VerifierError } from "./types.js";
 export type {
   VerifierConfig,
   VerifyOptions,

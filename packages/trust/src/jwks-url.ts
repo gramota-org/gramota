@@ -1,14 +1,14 @@
-import type { JsonWebKey } from "@gramota/jose";
+import type { Fetcher, JsonWebKey } from "@gramota/jose";
 import {
   TrustResolutionError,
   type TrustContext,
   type TrustResolver,
 } from "./types.js";
 
-export type Fetcher = (
-  url: string,
-  init?: { signal?: AbortSignal },
-) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
+// Re-export so existing consumers of `@gramota/trust` keep working
+// without a separate import from `@gramota/jose`. The canonical home of
+// the type is `@gramota/jose`.
+export type { Fetcher };
 
 export interface JwksUrlResolverOptions {
   /** Build the JWKS URL from the issuer's `iss` claim. Default: appends
@@ -49,7 +49,9 @@ export class JwksUrlTrustResolver implements TrustResolver {
         fetch(url, init).then((r) => ({
           ok: r.ok,
           status: r.status,
+          headers: r.headers,
           json: () => r.json(),
+          text: () => r.text(),
         })));
     this.nowFn = options.now ?? Date.now;
   }

@@ -40,9 +40,9 @@ const LIST_URL = "https://issuer.example.com/status/2024-04";
 function mockHost(token: string): Fetcher {
   return async (url) => {
     if (url === LIST_URL) {
-      return { ok: true, status: 200, text: async () => token };
+      return { ok: true, status: 200, text: async () => token, json: async () => undefined };
     }
-    return { ok: false, status: 404, text: async () => "not found" };
+    return { ok: false, status: 404, text: async () => "not found", json: async () => undefined };
   };
 }
 

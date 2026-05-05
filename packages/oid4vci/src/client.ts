@@ -11,8 +11,8 @@ import {
 } from "@gramota/credential-format";
 import {
   parseCredentialOffer,
-  preAuthorizedCodeFrom,
-  txCodeRequirementFrom,
+  extractPreAuthorizedCode,
+  extractTxCodeRequirement,
 } from "./offer.js";
 import {
   fetchAuthorizationServerMetadata,
@@ -194,7 +194,7 @@ export class Oid4vciClient {
   ): Promise<AcceptOfferResult> {
     const offer = parseCredentialOffer(url);
 
-    const preAuth = preAuthorizedCodeFrom(offer);
+    const preAuth = extractPreAuthorizedCode(offer);
     if (preAuth === null) {
       throw new Oid4vciError(
         "oid4vci.unsupported_grant",
@@ -202,7 +202,7 @@ export class Oid4vciClient {
       );
     }
 
-    const txReq = txCodeRequirementFrom(offer);
+    const txReq = extractTxCodeRequirement(offer);
     if (txReq !== null && options.txCode === undefined) {
       throw new Oid4vciError(
         "oid4vci.tx_code_required",

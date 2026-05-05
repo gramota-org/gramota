@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
-  JoseVerificationError,
+  JoseError,
   extractPublicKeyFromX5c,
   parseX5cEntry,
   validateX5cChain,
@@ -46,9 +46,9 @@ describe("x5cToPem", () => {
   });
 
   it("rejects empty / non-string input", () => {
-    expect(() => x5cToPem("")).toThrow(JoseVerificationError);
+    expect(() => x5cToPem("")).toThrow(JoseError);
     // @ts-expect-error: testing runtime guard
-    expect(() => x5cToPem(null)).toThrow(JoseVerificationError);
+    expect(() => x5cToPem(null)).toThrow(JoseError);
   });
 });
 
@@ -71,8 +71,8 @@ describe("parseX5cEntry", () => {
       parseX5cEntry("AAAA-not-a-cert");
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(JoseVerificationError);
-      expect((err as JoseVerificationError).code).toBe("jose.x5c_parse_failed");
+      expect(err).toBeInstanceOf(JoseError);
+      expect((err as JoseError).code).toBe("jose.x5c_parse_failed");
     }
   });
 });
@@ -91,7 +91,7 @@ describe("extractPublicKeyFromX5c", () => {
       extractPublicKeyFromX5c([]);
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe("jose.x5c_empty");
+      expect((err as JoseError).code).toBe("jose.x5c_empty");
     }
   });
 
@@ -101,7 +101,7 @@ describe("extractPublicKeyFromX5c", () => {
       extractPublicKeyFromX5c(undefined);
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe("jose.x5c_missing");
+      expect((err as JoseError).code).toBe("jose.x5c_missing");
     }
   });
 });
@@ -131,11 +131,11 @@ describe("validateX5cChain", () => {
       });
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(JoseVerificationError);
-      expect((err as JoseVerificationError).code).toBe(
+      expect(err).toBeInstanceOf(JoseError);
+      expect((err as JoseError).code).toBe(
         "jose.x5c_chain_invalid",
       );
-      expect((err as JoseVerificationError).message).toMatch(/expired/);
+      expect((err as JoseError).message).toMatch(/expired/);
     }
   });
 
@@ -149,7 +149,7 @@ describe("validateX5cChain", () => {
       });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.x5c_no_trust_anchor",
       );
     }
@@ -160,7 +160,7 @@ describe("validateX5cChain", () => {
       validateX5cChain(x5c, { trustAnchors: [], now: NOW_VALID });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe("jose.invalid_input");
+      expect((err as JoseError).code).toBe("jose.invalid_input");
     }
   });
 
@@ -169,7 +169,7 @@ describe("validateX5cChain", () => {
       validateX5cChain([], { trustAnchors: [euCaPem], now: NOW_VALID });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe("jose.x5c_empty");
+      expect((err as JoseError).code).toBe("jose.x5c_empty");
     }
   });
 });

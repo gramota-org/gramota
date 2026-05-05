@@ -9,11 +9,10 @@
 import { describe, it, expect } from "vitest";
 import { Issuer, IssuerError } from "@gramota/issuer";
 import { Holder, HolderError } from "@gramota/holder";
-import { Verifier, VerificationError } from "@gramota/verifier";
-import { JoseVerificationError } from "@gramota/jose";
+import { Verifier, VerifierError } from "@gramota/verifier";
+import { JoseError } from "@gramota/jose";
 import {
-  SdJwtKeyBindingError,
-  SdJwtParseError,
+  SdJwtError,
   parseSdJwt,
 } from "@gramota/sd-jwt";
 import { Oid4vpError, parseAuthorizationRequestUrl } from "@gramota/oid4vp";
@@ -28,13 +27,13 @@ import {
 import { newEs256KeyPair, makeIssuerSigner } from "../src/test-helpers.js";
 
 describe("Error codes — present, typed, switchable", () => {
-  it("SdJwtParseError carries 'sd_jwt.parse.*' codes", () => {
+  it("SdJwtError carries 'sd_jwt.parse.*' codes", () => {
     try {
       parseSdJwt("");
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(SdJwtParseError);
-      const e = err as SdJwtParseError;
+      expect(err).toBeInstanceOf(SdJwtError);
+      const e = err as SdJwtError;
       expect(e.code).toMatch(/^sd_jwt\.parse\./);
     }
   });
@@ -113,7 +112,7 @@ describe("Error codes — present, typed, switchable", () => {
     }
   });
 
-  it("SdJwtKeyBindingError carries 'sd_jwt.kb.*' codes", async () => {
+  it("SdJwtError carries 'sd_jwt.kb.*' codes", async () => {
     const issuerKey = await newEs256KeyPair();
     const holderKey = await newEs256KeyPair();
 
@@ -152,14 +151,14 @@ describe("Error codes — present, typed, switchable", () => {
       });
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(SdJwtKeyBindingError);
-      expect((err as SdJwtKeyBindingError).code).toBe(
+      expect(err).toBeInstanceOf(SdJwtError);
+      expect((err as SdJwtError).code).toBe(
         "sd_jwt.kb.audience_mismatch",
       );
     }
   });
 
-  it("VerificationError exposes a `code` property equal to result.failedCheck", async () => {
+  it("VerifierError exposes a `code` property equal to result.failedCheck", async () => {
     const issuerKey = await newEs256KeyPair();
     const holderKey = await newEs256KeyPair();
     const issuer = new Issuer({
@@ -205,21 +204,21 @@ describe("Error codes — present, typed, switchable", () => {
       result.unwrap();
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(VerificationError);
-      const ve = err as VerificationError;
+      expect(err).toBeInstanceOf(VerifierError);
+      const ve = err as VerifierError;
       expect(ve.code).toBe("kb-jwt.audience");
       expect(ve.code).toBe(ve.result.failedCheck);
     }
   });
 
-  it("JoseVerificationError carries 'jose.*' codes", async () => {
+  it("JoseError carries 'jose.*' codes", async () => {
     const { verifyJws } = await import("@gramota/jose");
     try {
       await verifyJws("not-a-jws", { kty: "EC", crv: "P-256", x: "x", y: "y" });
       throw new Error("should have thrown");
     } catch (err) {
-      expect(err).toBeInstanceOf(JoseVerificationError);
-      expect((err as JoseVerificationError).code).toMatch(/^jose\./);
+      expect(err).toBeInstanceOf(JoseError);
+      expect((err as JoseError).code).toMatch(/^jose\./);
     }
   });
 

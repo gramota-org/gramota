@@ -1,6 +1,6 @@
 # @gramota/credential-format
 
-> Pluggable credential-format handler registry — Strategy + Registry pattern for SD-JWT-VC, mDoc, and future formats.
+> Pluggable credential-format handler registry — Strategy + Registry pattern. Default registry ships with `dc+sd-jwt`; add custom handlers for mDoc, W3C-VC-JWT, or proprietary formats without forking the wallet.
 
 Part of [Gramota](https://github.com/gramota-org/gramota) — the TypeScript
 SDK for the EU Digital Identity Wallet (EUDIW).
@@ -13,17 +13,28 @@ pnpm add @gramota/credential-format
 # or: yarn add @gramota/credential-format
 ```
 
-## Usage
+## Quick example
 
 ```ts
-import { CredentialFormatRegistry, sdJwtVcHandler } from "@gramota/credential-format";
+import {
+  createDefaultCredentialFormatRegistry,
+  SdJwtVcFormatHandler,
+} from "@gramota/credential-format";
 
-const registry = new CredentialFormatRegistry();
-registry.register(sdJwtVcHandler);
+const registry = createDefaultCredentialFormatRegistry();
+const handler = registry.get("dc+sd-jwt");
 ```
 
-For full docs, examples, and the high-level Verifier/Issuer/Holder API,
-see the [main repo](https://github.com/gramota-org/gramota).
+## What's inside
+
+- `CredentialFormatRegistry` — register, look up, and dispatch by format string
+- `SdJwtVcFormatHandler` — default handler for `dc+sd-jwt` / `vc+sd-jwt`
+- `createDefaultCredentialFormatRegistry` — pre-populated registry
+- `CredentialFormatHandler` interface — implement for new formats (mDoc, etc.)
+- `hasIssuanceCapability`, `IssuanceCapableHandler` — capability flag for handlers that also issue (not just present / verify)
+
+For the high-level Holder / Verifier API that consumes the registry, see the
+[main repo](https://github.com/gramota-org/gramota).
 
 ## License
 

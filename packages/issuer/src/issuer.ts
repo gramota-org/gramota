@@ -11,6 +11,13 @@ import {
 const DEFAULT_TYP = "vc+sd-jwt";
 const DEFAULT_HASH_ALG: HashAlg = "sha-256";
 
+/** Stripe-style sub-API for credential operations.
+ *  `issuer.credentials.X(...)`. */
+export interface IssuerCredentialsApi {
+  /** Issue a single SD-JWT-VC credential bound to a holder. */
+  issue(options: IssueOptions): Promise<IssueResult>;
+}
+
 /**
  * The issuer role per IETF SD-JWT-VC §3.
  *
@@ -22,6 +29,12 @@ const DEFAULT_HASH_ALG: HashAlg = "sha-256";
  *     appear in `subject`,
  *   - {@link Signer} Strategy for signing — accepts raw JWKs (shorthand)
  *     or production-grade Signers (HSM, KMS, custom backends).
+ *
+ * Two API shapes resolve to the same code path:
+ *   - `issuer.credentials.issue(...)` — Stripe-style namespacing,
+ *     symmetric with `holder.credentials.*` and forward-compatible
+ *     with future operations (revoke, suspend, list).
+ *   - `issuer.issue(...)` — flat shorthand for the common case.
  */
 export class Issuer {
   /** The issuer's signer. Either supplied directly via `config.signer`
@@ -33,6 +46,10 @@ export class Issuer {
   private readonly typ: string | undefined;
   private readonly hashAlg: HashAlg | undefined;
 
+  /** Credential operations. `issuer.credentials.{issue}(...)`. Mirrors
+   * `holder.credentials.*` for stylistic symmetry across the SDK. */
+  readonly credentials: IssuerCredentialsApi;
+
   constructor(config: IssuerConfig) {
     if (typeof config.issuerId !== "string" || config.issuerId.length === 0) {
       throw new TypeError("Issuer: issuerId is required (a stable URL)");
@@ -42,10 +59,23 @@ export class Issuer {
     this.kid = config.kid;
     this.typ = config.typ;
     this.hashAlg = config.hashAlg;
+
+    // Build the namespaced sub-API. `issuer.credentials.issue` and
+    // `issuer.issue` both resolve here — single implementation.
+    this.credentials = {
+      issue: (options) => this.issueImpl(options),
+    };
   }
 
-  /** Issue a single SD-JWT-VC credential bound to a holder. */
+  /** Issue a single SD-JWT-VC credential bound to a holder.
+   *
+   * Equivalent to `issuer.credentials.issue(options)`. Both shapes are
+   * stable; pick whichever reads better at the call site. */
   async issue(options: IssueOptions): Promise<IssueResult> {
+    return this.issueImpl(options);
+  }
+
+  private async issueImpl(options: IssueOptions): Promise<IssueResult> {
     validate(options);
 
     const issuedAt = options.issuedAt ?? Math.floor(Date.now() / 1000);

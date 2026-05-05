@@ -7,9 +7,17 @@ import type {
 
 /** Configuration for a Verifier instance. */
 export interface VerifierConfig {
-  /** The verifier's identifier. The KB-JWT's `aud` claim MUST equal this.
-   * Cross-verifier replay protection — pick a stable, app-specific URL. */
+  /** The verifier's identifier. The KB-JWT's `aud` claim MUST equal this
+   * (or any of `additionalAudiences`). Cross-verifier replay protection —
+   * pick a stable, app-specific URL. */
   audience: string;
+
+  /** Additional accepted `aud` values. Useful when wallets in the wild
+   * disagree about what the KB-JWT audience should be. The OID4VP
+   * `x509_san_dns:<host>` client_id is a common alternate form some
+   * wallets (the EU reference wallet's eudi-app-android-wallet-ui) put
+   * in `aud` instead of the verifier audience URL. */
+  additionalAudiences?: readonly string[];
 
   /** Exactly one of `issuerKey` (shorthand) OR `trust` (full resolver) is
    * required. */
@@ -136,12 +144,12 @@ export interface FailureResult {
   failedCheck: SecurityCheckName;
   /** Every check up to and including the one that failed. */
   checks: readonly SecurityCheck[];
-  /** Throws `VerificationError` carrying this result. */
+  /** Throws `VerifierError` carrying this result. */
   unwrap(): never;
 }
 
-export class VerificationError extends Error {
-  override readonly name = "VerificationError";
+export class VerifierError extends Error {
+  override readonly name = "VerifierError";
   /** Equal to `result.failedCheck` — stable identifier for log filters,
    * alerts, and dashboards. Same shape as the codes used by other packages. */
   readonly code: SecurityCheckName;

@@ -6,7 +6,7 @@ import {
   type ChainValidationResult,
 } from "./x5c.js";
 import {
-  JoseVerificationError,
+  JoseError,
   type VerifiedJws,
   type VerifyJwsOptions,
 } from "./types.js";
@@ -50,7 +50,7 @@ export async function verifyJwsWithX5c(
   options: VerifyJwsX5cOptions = {},
 ): Promise<VerifiedJwsWithX5c> {
   if (typeof jws !== "string" || jws.length === 0) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.invalid_input",
       "jws must be a non-empty string",
     );
@@ -59,7 +59,7 @@ export async function verifyJwsWithX5c(
   // Extract x5c from the JOSE header before invoking crypto.
   const headerB64 = jws.split(".")[0];
   if (headerB64 === undefined || headerB64.length === 0) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.malformed_jws",
       "malformed JWS: missing header segment",
     );
@@ -69,19 +69,19 @@ export async function verifyJwsWithX5c(
     const json = Buffer.from(headerB64, "base64url").toString("utf-8");
     header = JSON.parse(json) as { x5c?: unknown };
   } catch {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.malformed_header",
       "JWS header is not valid base64url JSON",
     );
   }
   if (!Array.isArray(header.x5c)) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_missing",
       "JWS header has no x5c array",
     );
   }
   if (header.x5c.length === 0) {
-    throw new JoseVerificationError(
+    throw new JoseError(
       "jose.x5c_empty",
       "JWS header x5c is an empty array",
     );

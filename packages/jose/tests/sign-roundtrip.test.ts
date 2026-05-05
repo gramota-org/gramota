@@ -6,7 +6,7 @@ import { generateKeyPair, exportJWK } from "jose";
 import { signJws } from "../src/sign.js";
 import { verifyJws } from "../src/verify.js";
 import {
-  JoseVerificationError,
+  JoseError,
   type JsonWebKey,
   type SupportedAlg,
 } from "../src/types.js";
@@ -55,14 +55,14 @@ describe("signJws + verifyJws roundtrip", () => {
         // @ts-expect-error: SupportedAlg never contains 'none'
         alg: "none",
       }),
-    ).rejects.toBeInstanceOf(JoseVerificationError);
+    ).rejects.toBeInstanceOf(JoseError);
   });
 
   it("propagates jose's algorithm-mismatch error when alg doesn't match key", async () => {
     const { priv } = await makeKeyPair("ES256");
     await expect(
       signJws(payload, priv, { alg: "RS256" }),
-    ).rejects.toBeInstanceOf(JoseVerificationError);
+    ).rejects.toBeInstanceOf(JoseError);
   });
 
   it("rejects a non-object payload", async () => {
@@ -70,6 +70,6 @@ describe("signJws + verifyJws roundtrip", () => {
     await expect(
       // @ts-expect-error: testing runtime guard
       signJws("not an object", priv, { alg: "ES256" }),
-    ).rejects.toBeInstanceOf(JoseVerificationError);
+    ).rejects.toBeInstanceOf(JoseError);
   });
 });

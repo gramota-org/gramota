@@ -49,7 +49,7 @@ export interface VerifiedJws {
   alg: SupportedAlg;
 }
 
-/** Stable machine-readable error codes for `JoseVerificationError`. */
+/** Stable machine-readable error codes for `JoseError`. */
 export type JoseErrorCode =
   | "jose.invalid_input"
   | "jose.malformed_jws"
@@ -68,8 +68,8 @@ export type JoseErrorCode =
   | "jose.x5c_chain_invalid"
   | "jose.x5c_no_trust_anchor";
 
-export class JoseVerificationError extends Error {
-  override readonly name = "JoseVerificationError";
+export class JoseError extends Error {
+  override readonly name = "JoseError";
   readonly code: JoseErrorCode;
 
   constructor(

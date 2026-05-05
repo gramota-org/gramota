@@ -23,7 +23,12 @@
  */
 
 import { randomBytes, createHash } from "node:crypto";
-import type { Signer } from "@gramota/jose";
+import {
+  computeJwkThumbprint,
+  verifyJws,
+  type JsonWebKey,
+  type Signer,
+} from "@gramota/jose";
 import { Oid4vciError } from "./types.js";
 import type { Fetcher, FetcherResponse } from "./metadata.js";
 
@@ -156,6 +161,249 @@ function stripPrivateFields(
 function randomJti(): string {
   // 16 bytes → 22 base64url chars; well above RFC 9449's "MUST be unique" bar.
   return randomBytes(16).toString("base64url");
+}
+
+// ---------------------------------------------------------------------------
+// Server-side: verify an inbound DPoP proof (RFC 9449 §4.3 / §6 / §8)
+// ---------------------------------------------------------------------------
+
+export interface VerifyDpopJwtOptions {
+  /** Compact-serialized DPoP JWT from the inbound `DPoP:` header. */
+  jwt: string;
+  /** HTTP method of the request being authenticated (must equal `htm`). */
+  htm: string;
+  /** HTTP URL of the request, including scheme + host + path. Query and
+   * fragment are stripped before comparing against `htu` per RFC 9449 §4.2. */
+  htu: string;
+  /** When verifying a resource-server request, the access token whose
+   * sha256 (base64url) must equal the proof's `ath`. Omit on
+   * authorization-server (`/token`) verification — the proof's `ath`
+   * MUST then be absent (§6.1). */
+  accessToken?: string;
+  /** When the server demands a nonce (RFC 9449 §8), the proof must echo
+   * this exact value in its `nonce` claim. */
+  nonce?: string;
+  /** Allowed iat skew in seconds. Default 60. */
+  maxAgeSeconds?: number;
+  /** Replay-protection callback. Return `true` if the `jti` has been
+   * seen before. Omit to skip replay checks entirely (e.g. tests). */
+  hasSeenJti?: (jti: string) => boolean | Promise<boolean>;
+  /** Record a successfully-verified `jti` so future calls reject it.
+   * Called only after all other checks pass — never on failure. */
+  recordJti?: (jti: string) => void | Promise<void>;
+  /** Clock override for tests, in seconds-since-epoch. Default `Date.now()`. */
+  now?: number;
+}
+
+export interface VerifyDpopJwtResult {
+  /** Public JWK extracted from the proof's JWS header. Caller can use
+   * this to identify the wallet's binding key. */
+  publicJwk: JsonWebKey;
+  /** RFC 7638 thumbprint of `publicJwk`. Used as the `jkt` value when
+   * binding access tokens — issuers store this with the token, then on
+   * resource-server access compare against the next proof's thumbprint. */
+  jkt: string;
+  /** Verified payload of the proof. Includes at minimum `jti`, `htm`,
+   * `htu`, `iat`. May include `ath`, `nonce` per the request type. */
+  payload: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * Verify an inbound DPoP proof JWT and return the JWK thumbprint binding.
+ *
+ * The verifier:
+ *   1. Parses the JWS header — checks `typ: "dpop+jwt"` and reads `jwk`.
+ *   2. Verifies the JWS signature against the embedded `jwk` (no
+ *      external key resolution — DPoP proofs are self-attesting).
+ *   3. Validates payload claims: `htm` matches request method, `htu`
+ *      matches request URL (after stripping query/fragment), `iat`
+ *      is within `maxAgeSeconds`, `jti` is present and not replayed,
+ *      and (for resource-server access) `ath` matches the access token.
+ *   4. Returns the verifier-relevant outputs: the public JWK, its
+ *      RFC 7638 thumbprint (use as token binding), and the verified
+ *      payload for any caller-specific claim inspection.
+ *
+ * Throws {@link Oid4vciError} with `oid4vci.invalid_input` (malformed) or
+ * `oid4vci.token_response_invalid` (semantic violation) on rejection.
+ */
+export async function verifyDpopJwt(
+  options: VerifyDpopJwtOptions,
+): Promise<VerifyDpopJwtResult> {
+  if (typeof options.jwt !== "string" || options.jwt.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: jwt is required",
+    );
+  }
+  if (typeof options.htm !== "string" || options.htm.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: htm is required",
+    );
+  }
+  if (typeof options.htu !== "string" || options.htu.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: htu is required",
+    );
+  }
+
+  // Parse the protected header to extract typ + jwk before signature
+  // verification — we need the embedded key.
+  const segments = options.jwt.split(".");
+  if (segments.length !== 3) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: malformed JWT (expected 3 segments)",
+    );
+  }
+  let header: Record<string, unknown>;
+  try {
+    const json = Buffer.from(segments[0]!, "base64url").toString("utf-8");
+    const parsed: unknown = JSON.parse(json);
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("header is not a JSON object");
+    }
+    header = parsed as Record<string, unknown>;
+  } catch (err) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: malformed header: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+
+  if (header["typ"] !== "dpop+jwt") {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: header typ must be "dpop+jwt", got ${JSON.stringify(header["typ"])}`,
+    );
+  }
+
+  const jwk = header["jwk"];
+  if (jwk === null || typeof jwk !== "object" || Array.isArray(jwk)) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: header is missing jwk",
+    );
+  }
+  const publicJwk = jwk as JsonWebKey;
+
+  // verifyJws also enforces alg allowlist (no `alg=none`) and parses
+  // the payload as a JSON object.
+  let verified;
+  try {
+    verified = await verifyJws(options.jwt, publicJwk);
+  } catch (err) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: signature verification failed: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+  const payload = verified.payload;
+
+  // Claim checks. These are spec-mandated; failure of any is a hard reject.
+  const jti = payload["jti"];
+  if (typeof jti !== "string" || jti.length === 0) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: payload is missing jti",
+    );
+  }
+
+  const htm = payload["htm"];
+  if (htm !== options.htm) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: htm mismatch (proof=${JSON.stringify(htm)}, expected=${JSON.stringify(options.htm)})`,
+    );
+  }
+
+  const expectedHtu = stripQueryAndFragment(options.htu);
+  const proofHtu = payload["htu"];
+  if (typeof proofHtu !== "string" || stripQueryAndFragment(proofHtu) !== expectedHtu) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: htu mismatch (proof=${JSON.stringify(proofHtu)}, expected=${JSON.stringify(expectedHtu)})`,
+    );
+  }
+
+  const iat = payload["iat"];
+  if (typeof iat !== "number" || !Number.isFinite(iat)) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "verifyDpopJwt: payload is missing iat or iat is not numeric",
+    );
+  }
+  const nowSec = options.now ?? Math.floor(Date.now() / 1000);
+  const maxAge = options.maxAgeSeconds ?? 60;
+  if (iat > nowSec + maxAge) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: iat is in the future (iat=${iat}, now=${nowSec})`,
+    );
+  }
+  if (iat < nowSec - maxAge) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      `verifyDpopJwt: iat is too old (iat=${iat}, now=${nowSec}, maxAge=${maxAge}s)`,
+    );
+  }
+
+  // ath — required only when verifying resource-server access (the caller
+  // signals this by passing accessToken). On token-endpoint requests the
+  // caller omits accessToken and the proof must NOT include ath.
+  if (options.accessToken !== undefined) {
+    const expectedAth = computeAccessTokenHash(options.accessToken);
+    const ath = payload["ath"];
+    if (typeof ath !== "string" || ath.length === 0) {
+      throw new Oid4vciError(
+        "oid4vci.invalid_input",
+        "verifyDpopJwt: ath is required for resource-server requests",
+      );
+    }
+    if (ath !== expectedAth) {
+      throw new Oid4vciError(
+        "oid4vci.invalid_input",
+        "verifyDpopJwt: ath does not match the access token",
+      );
+    }
+  }
+
+  // nonce — required only when caller demands one.
+  if (options.nonce !== undefined) {
+    if (payload["nonce"] !== options.nonce) {
+      throw new Oid4vciError(
+        "oid4vci.invalid_input",
+        "verifyDpopJwt: nonce mismatch",
+      );
+    }
+  }
+
+  // Replay check + record. Order matters: we check first, then record only
+  // after every other validation passes, so a failed proof can't poison
+  // the jti store.
+  if (options.hasSeenJti) {
+    const seen = await options.hasSeenJti(jti);
+    if (seen) {
+      throw new Oid4vciError(
+        "oid4vci.invalid_input",
+        `verifyDpopJwt: jti ${jti} has been seen before (replay)`,
+      );
+    }
+  }
+  if (options.recordJti) {
+    await options.recordJti(jti);
+  }
+
+  return {
+    publicJwk,
+    jkt: computeJwkThumbprint(publicJwk),
+    payload,
+  };
 }
 
 // ---------------------------------------------------------------------------

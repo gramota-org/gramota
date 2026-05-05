@@ -6,7 +6,7 @@ import {
 } from "@gramota/sd-jwt";
 import {
   verifyJws,
-  JoseVerificationError,
+  JoseError,
   type Signer,
 } from "@gramota/jose";
 import { publicJwksEqual } from "./jwk-equal.js";
@@ -67,7 +67,7 @@ export async function receiveCredential(
     }
   }
   if (!verifiedAgainstAny) {
-    const detail = lastError instanceof JoseVerificationError ? lastError.message : "no match";
+    const detail = lastError instanceof JoseError ? lastError.message : "no match";
     throw new HolderError(
       "holder.issuer_signature_invalid",
       `issuer signature did not verify against any trusted key: ${detail}`,

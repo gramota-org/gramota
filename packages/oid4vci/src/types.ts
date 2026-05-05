@@ -90,17 +90,58 @@ export interface TokenResponse {
   scope?: string;
 }
 
-/** Credential request payload per OID4VCI §7.2. */
+/** Credential request payload per OID4VCI §7.2.
+ *
+ * The wire format evolved across drafts. We accept any of these shapes
+ * and `parseCredentialRequest` normalises them into a single canonical
+ * form for issuers to consume:
+ *
+ *   - **Draft 13 (legacy)**: top-level `format`/`vct`, single `proof`.
+ *   - **Draft 14/15**: `credential_configuration_id` (preferred) or
+ *     `credential_identifier` (Draft 15+ deferred-credential flow), with
+ *     either single `proof` or batch `proofs.jwt[]`.
+ */
 export interface CredentialRequest {
-  /** Either credential_configuration_id (newer) or vct/format (older). */
+  /** Draft 14+: identifies a row in `credential_configurations_supported`. */
   credential_configuration_id?: string;
+  /** Draft 15+: server-issued credential identifier (deferred / per-token). */
+  credential_identifier?: string;
+  /** Draft 13 (legacy): explicit format string. */
   format?: string;
+  /** Draft 13 (legacy): vc+sd-jwt type. */
   vct?: string;
-  /** Proof of possession — wallet signs a JWT with the cnf-bound key. */
+  /** Single proof of possession — Draft 13 form. Wallet signs a JWT
+   * with the cnf-bound key. */
   proof?: {
     proof_type: "jwt";
     jwt: string;
   };
+  /** Batch proofs of possession — Draft 14/15 form. The EU wallet
+   * (eudi-lib-jvm-openid4vci-kt 0.9+) sends this. Each entry is a
+   * separate proof JWT for one credential in the batch; for non-batch
+   * issuance the array has length 1. */
+  proofs?: {
+    jwt?: readonly string[];
+  };
+}
+
+/** Canonical form returned by `parseCredentialRequest` — one shape for
+ * issuers to consume regardless of which OID4VCI draft the wallet uses. */
+export interface ParsedCredentialRequest {
+  /** Always present. Either echoes the wallet-provided value or is
+   * derived from `format` (Draft 13 fallback). */
+  credentialConfigurationId?: string;
+  /** Always present (defaulted to "dc+sd-jwt" if the wallet only sent
+   * a credential_configuration_id and the issuer's metadata says so). */
+  format?: string;
+  /** SD-JWT-VC type (only set when format is `dc+sd-jwt`). */
+  vct?: string;
+  /** Always present when proof was supplied — the first JWT from
+   * `proofs.jwt[]` or the singular `proof.jwt`. */
+  proofJwt?: string;
+  /** All proof JWTs (length 1 for non-batch) so issuers that support
+   * batch issuance can iterate. */
+  proofJwts: readonly string[];
 }
 
 /** Credential response per OID4VCI §7.3. */

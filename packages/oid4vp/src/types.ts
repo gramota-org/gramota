@@ -63,16 +63,65 @@ export interface AuthorizationRequest {
   scope?: string;
 }
 
-/** OID4VP §6 — Authorization Response from wallet to verifier. */
+/** OID4VP §6 — Authorization Response from wallet to verifier.
+ *
+ * The wire shape depends on which query language the request used:
+ *
+ *   - **Presentation Exchange (DIF PEX)**: `vp_token` is a string or
+ *     string[], paired with `presentation_submission` mapping descriptors
+ *     to vp_token positions.
+ *   - **DCQL** (OID4VP Final 1.0): `vp_token` is a JSON OBJECT keyed by
+ *     the DCQL credential `id` (e.g. `{"pid": "<sd-jwt-vc>"}`). No
+ *     `presentation_submission` is sent — the keys ARE the mapping.
+ *
+ * Verifiers should accept whichever shape the wallet sends; production EU
+ * wallets (eudi-lib-android-wallet-ui 0.26+) use DCQL exclusively.
+ */
 export interface AuthorizationResponse {
-  /** The presentation(s) — a single SD-JWT-VC or an array for multi-credential. */
-  vp_token: string | readonly string[];
-  /** DIF Presentation Submission mapping descriptors → vp_token positions. */
-  presentation_submission: Readonly<Record<string, unknown>>;
+  /** The presentation(s).
+   *
+   *   - String / string[] form (PEX response).
+   *   - Object form (DCQL response) — keys are the DCQL credential ids
+   *     and values are the credential strings.
+   */
+  vp_token: string | readonly string[] | Readonly<Record<string, string>>;
+  /** DIF Presentation Submission mapping descriptors → vp_token positions.
+   * Required for PEX responses; absent for DCQL responses. */
+  presentation_submission?: Readonly<Record<string, unknown>>;
   /** Echoes the verifier's `state` from the request. */
   state?: string;
   /** OID4VP §6.4 — the wallet's identifier (e.g. issuer URL). */
   iss?: string;
+}
+
+/**
+ * X.509 signing material for an OID4VP verifier.
+ *
+ * Bundles together the four artefacts a verifier needs to produce signed
+ * Authorization Requests (RFC 9101 JAR) and prove its identity to wallets
+ * via the `x509_san_dns` client_id_prefix:
+ *
+ *   - `privateKeyPem` — PKCS#8 private key, used to sign the JAR
+ *   - `certificatePem` — leaf cert, served when the wallet asks for proof
+ *   - `x5c` — base64 DER cert(s) embedded in the JWS `x5c` header
+ *   - `sanDns` — the SAN-DNS hostname the wallet matches against `client_id`
+ *
+ * Generation: see `generateSigningCert` for self-signed certs (local dev,
+ * pinned-trust-store deployments). Production typically uses an externally
+ * issued cert (ACME, corporate CA) — same shape, different origin.
+ */
+export interface SigningCert {
+  /** PEM-encoded PKCS#8 private key. */
+  readonly privateKeyPem: string;
+  /** PEM-encoded leaf certificate. */
+  readonly certificatePem: string;
+  /** Base64-encoded DER certs in chain order, suitable for the JWS `x5c`
+   * header per RFC 7515 §4.1.6. Length 1 for self-signed leaves. */
+  readonly x5c: readonly string[];
+  /** DNS name in the cert's Subject Alternative Name. The wallet
+   * compares this against the OID4VP `client_id` value (with the
+   * `x509_san_dns:` prefix stripped). */
+  readonly sanDns: string;
 }
 
 /** Stable codes for `Oid4vpError`. */
@@ -85,7 +134,9 @@ export type Oid4vpErrorCode =
   | "oid4vp.invalid_json"
   | "oid4vp.invalid_value_type"
   | "oid4vp.malformed_body"
-  | "oid4vp.malformed_submission";
+  | "oid4vp.malformed_submission"
+  | "oid4vp.cert_generation_failed"
+  | "oid4vp.jar_signing_failed";
 
 export class Oid4vpError extends Error {
   override readonly name = "Oid4vpError";

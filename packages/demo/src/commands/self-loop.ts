@@ -19,7 +19,7 @@
  */
 
 import { exportJWK, generateKeyPair } from "jose";
-import type { JsonWebKey } from "@gramota/jose";
+import { mockFetcherResponse, type JsonWebKey } from "@gramota/jose";
 import { Issuer } from "@gramota/issuer";
 import { Holder } from "@gramota/holder";
 import { Verifier } from "@gramota/verifier";
@@ -141,12 +141,15 @@ export async function runSelfLoop(): Promise<void> {
     alg: "ES256",
     // idx 42 left at 0 (VALID).
   });
-  const statusFetcher: StatusListFetcher = async (url) => {
-    if (url === STATUS_LIST_URL) {
-      return { ok: true, status: 200, text: async () => statusToken };
-    }
-    return { ok: false, status: 404, text: async () => "not found" };
-  };
+  // In-process network adapter for the demo — no real HTTP server runs.
+  // The verifier's status-list resolver invokes this when it needs to
+  // fetch the status list; we satisfy the request from the local
+  // statusToken built above. `mockFetcherResponse` packages the body
+  // into a strict-shape `FetcherResponse` so this stays a one-liner.
+  const statusFetcher: StatusListFetcher = async (url) =>
+    url === STATUS_LIST_URL
+      ? mockFetcherResponse({ text: statusToken })
+      : mockFetcherResponse({ ok: false, status: 404, text: "not found" });
 
   const verifier = new Verifier({
     audience: VERIFIER_AUDIENCE,

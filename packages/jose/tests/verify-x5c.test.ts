@@ -12,7 +12,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
-  JoseVerificationError,
+  JoseError,
   verifyJwsWithX5c,
   x5cToPem,
 } from "../src/index.js";
@@ -47,7 +47,7 @@ describe("verifyJwsWithX5c — signature only (no chain validation)", () => {
       await verifyJwsWithX5c(tampered);
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.signature_invalid",
       );
     }
@@ -62,7 +62,7 @@ describe("verifyJwsWithX5c — signature only (no chain validation)", () => {
       await verifyJwsWithX5c(tampered);
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.signature_invalid",
       );
     }
@@ -80,7 +80,7 @@ describe("verifyJwsWithX5c — signature only (no chain validation)", () => {
       await verifyJwsWithX5c(fakeJws);
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe("jose.x5c_missing");
+      expect((err as JoseError).code).toBe("jose.x5c_missing");
     }
   });
 
@@ -89,7 +89,7 @@ describe("verifyJwsWithX5c — signature only (no chain validation)", () => {
       await verifyJwsWithX5c(jar, { algorithms: ["RS256"] });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.alg_not_allowed",
       );
     }
@@ -127,7 +127,7 @@ describe("verifyJwsWithX5c — with chain validation", () => {
       });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.signature_invalid",
       );
     }
@@ -143,7 +143,7 @@ describe("verifyJwsWithX5c — with chain validation", () => {
       });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.x5c_no_trust_anchor",
       );
     }
@@ -157,10 +157,10 @@ describe("verifyJwsWithX5c — with chain validation", () => {
       });
       throw new Error("should have thrown");
     } catch (err) {
-      expect((err as JoseVerificationError).code).toBe(
+      expect((err as JoseError).code).toBe(
         "jose.x5c_chain_invalid",
       );
-      expect((err as JoseVerificationError).message).toMatch(/expired/);
+      expect((err as JoseError).message).toMatch(/expired/);
     }
   });
 });

@@ -7,45 +7,15 @@ import {
 } from "@gramota/jose";
 import { computeSdHash } from "./sd-hash.js";
 import type { HashAlg } from "./issue.js";
-import type { ParsedSdJwt, VerifiedKeyBinding } from "./types.js";
+import {
+  SdJwtError,
+  type ParsedSdJwt,
+  type VerifiedKeyBinding,
+} from "./types.js";
 
-/** Stable codes for `SdJwtKeyBindingError`. Each maps to one of the 9 rules
- * enforced by `verifyKeyBinding`. */
-export type SdJwtKeyBindingErrorCode =
-  | "sd_jwt.kb.invalid_input"
-  | "sd_jwt.kb.absent"
-  | "sd_jwt.kb.cnf_missing"
-  | "sd_jwt.kb.cnf_jwk_missing"
-  | "sd_jwt.kb.malformed"
-  | "sd_jwt.kb.malformed_header"
-  | "sd_jwt.kb.typ_mismatch"
-  | "sd_jwt.kb.signature_invalid"
-  | "sd_jwt.kb.required_claim_missing"
-  | "sd_jwt.kb.invalid_claim_type"
-  | "sd_jwt.kb.audience_mismatch"
-  | "sd_jwt.kb.nonce_mismatch"
-  | "sd_jwt.kb.iat_too_future"
-  | "sd_jwt.kb.iat_too_old"
-  | "sd_jwt.kb.transcript_mismatch"
-  | "sd_jwt.kb.sd_hash_compute_failed";
-
-/** All KB-JWT failures funnel through this single error type — easier for
- * verifiers to catch and log uniformly. */
-export class SdJwtKeyBindingError extends Error {
-  override readonly name = "SdJwtKeyBindingError";
-  readonly code: SdJwtKeyBindingErrorCode;
-  constructor(
-    code: SdJwtKeyBindingErrorCode,
-    message: string,
-    options?: { cause?: unknown },
-  ) {
-    super(message);
-    this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
-  }
-}
+// Failure codes raised by `buildKeyBindingJwt` / `verifyKeyBinding` are
+// namespaced `sd_jwt.kb.*`. See `SdJwtErrorCode` in `./types.ts` for the
+// full union of codes raised across the package.
 
 // ---------------------------------------------------------------------------
 // Builder (holder side)
@@ -90,19 +60,19 @@ export async function buildKeyBindingJwt(
   options: BuildKbJwtOptions,
 ): Promise<string> {
   if (typeof presentationPrefix !== "string" || presentationPrefix.length === 0) {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_input", "presentationPrefix must be a non-empty string");
+    throw new SdJwtError("sd_jwt.kb.invalid_input", "presentationPrefix must be a non-empty string");
   }
   if (!presentationPrefix.endsWith("~")) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.invalid_input",
       "presentationPrefix must end with '~' per IETF SD-JWT §4.3",
     );
   }
   if (typeof options.aud !== "string" || options.aud.length === 0) {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_input", "aud is required");
+    throw new SdJwtError("sd_jwt.kb.invalid_input", "aud is required");
   }
   if (typeof options.nonce !== "string" || options.nonce.length === 0) {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_input", "nonce is required");
+    throw new SdJwtError("sd_jwt.kb.invalid_input", "nonce is required");
   }
 
   const hashAlg = options.hashAlg ?? "sha-256";
@@ -144,8 +114,16 @@ export async function buildKeyBindingJwt(
 // ---------------------------------------------------------------------------
 
 export interface VerifyKbJwtOptions {
-  /** Required. The verifier's identifier; the KB-JWT's `aud` must equal this. */
-  expectedAudience: string;
+  /** Required. The verifier's identifier; the KB-JWT's `aud` must equal
+   * this (string form) or be present in this list (array form).
+   *
+   * In OID4VP+x509_san_dns, two `aud` shapes appear in the wild:
+   *   - the verifier's audience URL (e.g. `https://verifier.example`),
+   *     which is what the SD-JWT-VC spec implies; and
+   *   - the OID4VP `client_id` value (e.g. `x509_san_dns:verifier.example`),
+   *     which the EU reference wallet sends.
+   * Pass an array with both to accept either. */
+  expectedAudience: string | readonly string[];
   /** Required. The challenge the verifier issued; the KB-JWT's `nonce` must equal this. */
   expectedNonce: string;
   /** Maximum acceptable age of the KB-JWT in seconds. Default 60. */
@@ -178,7 +156,7 @@ export async function verifyKeyBinding(
 ): Promise<VerifiedKeyBinding> {
   // Rule 1: KB-JWT must be present
   if (parsed.keyBindingJwt === undefined) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.absent",
       "KB-JWT required but absent — presentation lacks holder binding proof",
     );
@@ -187,20 +165,20 @@ export async function verifyKeyBinding(
   // Rule 2: cnf.jwk must be in the parent SD-JWT
   const cnf = parsed.payload["cnf"];
   if (cnf === null || typeof cnf !== "object" || Array.isArray(cnf)) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.cnf_missing",
       "parent SD-JWT has no cnf claim — issuer never bound a holder key",
     );
   }
   const cnfJwk = (cnf as Record<string, unknown>)["jwk"];
   if (cnfJwk === null || typeof cnfJwk !== "object" || Array.isArray(cnfJwk)) {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.cnf_jwk_missing", "cnf.jwk is missing or malformed");
+    throw new SdJwtError("sd_jwt.kb.cnf_jwk_missing", "cnf.jwk is missing or malformed");
   }
 
   // Rule 3: typ MUST be "kb+jwt" — pre-flight before invoking crypto
   const headerB64 = parsed.keyBindingJwt.split(".")[0];
   if (headerB64 === undefined || headerB64.length === 0) {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.malformed", "KB-JWT is malformed");
+    throw new SdJwtError("sd_jwt.kb.malformed", "KB-JWT is malformed");
   }
   let kbHeader: Record<string, unknown>;
   try {
@@ -208,10 +186,10 @@ export async function verifyKeyBinding(
       Buffer.from(headerB64, "base64url").toString("utf-8"),
     );
   } catch {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.malformed_header", "KB-JWT header is not valid base64url JSON");
+    throw new SdJwtError("sd_jwt.kb.malformed_header", "KB-JWT header is not valid base64url JSON");
   }
   if (kbHeader["typ"] !== "kb+jwt") {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.typ_mismatch",
       `KB-JWT 'typ' must be 'kb+jwt', got ${JSON.stringify(kbHeader["typ"])}`,
     );
@@ -231,7 +209,7 @@ export async function verifyKeyBinding(
       verifyOpts,
     );
   } catch (err) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.signature_invalid",
       `KB-JWT signature verification failed: ${describe(err)}`,
     );
@@ -241,33 +219,36 @@ export async function verifyKeyBinding(
   const p = verified.payload;
   for (const claim of ["iat", "aud", "nonce", "sd_hash"] as const) {
     if (p[claim] === undefined) {
-      throw new SdJwtKeyBindingError("sd_jwt.kb.required_claim_missing", `KB-JWT is missing required claim: ${claim}`);
+      throw new SdJwtError("sd_jwt.kb.required_claim_missing", `KB-JWT is missing required claim: ${claim}`);
     }
   }
   if (typeof p["iat"] !== "number") {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_claim_type", "KB-JWT iat must be a number");
+    throw new SdJwtError("sd_jwt.kb.invalid_claim_type", "KB-JWT iat must be a number");
   }
   if (typeof p["aud"] !== "string") {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_claim_type", "KB-JWT aud must be a string");
+    throw new SdJwtError("sd_jwt.kb.invalid_claim_type", "KB-JWT aud must be a string");
   }
   if (typeof p["nonce"] !== "string") {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_claim_type", "KB-JWT nonce must be a string");
+    throw new SdJwtError("sd_jwt.kb.invalid_claim_type", "KB-JWT nonce must be a string");
   }
   if (typeof p["sd_hash"] !== "string") {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.invalid_claim_type", "KB-JWT sd_hash must be a string");
+    throw new SdJwtError("sd_jwt.kb.invalid_claim_type", "KB-JWT sd_hash must be a string");
   }
 
   // Rule 6: aud
-  if (p["aud"] !== options.expectedAudience) {
-    throw new SdJwtKeyBindingError(
+  const acceptedAud = Array.isArray(options.expectedAudience)
+    ? options.expectedAudience
+    : [options.expectedAudience];
+  if (!acceptedAud.includes(p["aud"] as string)) {
+    throw new SdJwtError(
       "sd_jwt.kb.audience_mismatch",
-      `KB-JWT aud mismatch — expected '${options.expectedAudience}', got '${p["aud"]}'`,
+      `KB-JWT aud mismatch — expected one of ${JSON.stringify(acceptedAud)}, got '${p["aud"]}'`,
     );
   }
 
   // Rule 7: nonce
   if (p["nonce"] !== options.expectedNonce) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.nonce_mismatch",
       "KB-JWT nonce mismatch — possible replay or wrong challenge",
     );
@@ -279,13 +260,13 @@ export async function verifyKeyBinding(
   const maxSkew = options.maxClockSkewSeconds ?? 30;
   const iat = p["iat"];
   if (iat > now + maxSkew) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.iat_too_future",
       `KB-JWT iat is too far in the future (iat=${iat}, now=${now}, maxSkew=${maxSkew}s)`,
     );
   }
   if (iat < now - maxAge) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.iat_too_old",
       `KB-JWT iat is too old (iat=${iat}, now=${now}, maxAge=${maxAge}s)`,
     );
@@ -300,10 +281,10 @@ export async function verifyKeyBinding(
   try {
     expectedSdHash = computeSdHash(parsed.presentationPrefix, hashAlg);
   } catch (err) {
-    throw new SdJwtKeyBindingError("sd_jwt.kb.sd_hash_compute_failed", `failed to compute sd_hash: ${describe(err)}`);
+    throw new SdJwtError("sd_jwt.kb.sd_hash_compute_failed", `failed to compute sd_hash: ${describe(err)}`);
   }
   if (p["sd_hash"] !== expectedSdHash) {
-    throw new SdJwtKeyBindingError(
+    throw new SdJwtError(
       "sd_jwt.kb.transcript_mismatch",
       "KB-JWT sd_hash does not match the transcript — disclosures may have been tampered with, added, removed, or reordered",
     );

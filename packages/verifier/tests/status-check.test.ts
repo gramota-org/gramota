@@ -102,9 +102,9 @@ async function buildPresentation(opts: {
 function mockHost(token: string): StatusListFetcher {
   return async (url) => {
     if (url === LIST_URL) {
-      return { ok: true, status: 200, text: async () => token };
+      return { ok: true, status: 200, text: async () => token, json: async () => undefined };
     }
-    return { ok: false, status: 404, text: async () => "not found" };
+    return { ok: false, status: 404, text: async () => "not found", json: async () => undefined };
   };
 }
 
