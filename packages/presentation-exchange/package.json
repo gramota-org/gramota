@@ -1,6 +1,6 @@
 {
   "name": "@gramota/presentation-exchange",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DIF Presentation Exchange v2 — match credentials against a verifier's presentation_definition.",
   "license": "Apache-2.0",
   "type": "module",

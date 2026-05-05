@@ -1,6 +1,6 @@
 {
   "name": "@gramota/credential-format",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Pluggable credential-format handler registry — Strategy + Registry pattern for SD-JWT-VC, mDoc, and future formats.",
   "license": "Apache-2.0",
   "type": "module",
