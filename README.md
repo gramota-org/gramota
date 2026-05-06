@@ -141,6 +141,7 @@ linking it to a specific GitHub commit (Sigstore transparency log).
 | [`@gramota/oid4vci`](https://www.npmjs.com/package/@gramota/oid4vci) [![npm](https://img.shields.io/npm/v/@gramota/oid4vci?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/oid4vci) | OID4VCI client + server: Draft 13/15 normalized, PAR, DPoP both sides |
 | [`@gramota/presentation-exchange`](https://www.npmjs.com/package/@gramota/presentation-exchange) [![npm](https://img.shields.io/npm/v/@gramota/presentation-exchange?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/presentation-exchange) | DIF Presentation Exchange v2 |
 | [`@gramota/dcql`](https://www.npmjs.com/package/@gramota/dcql) [![npm](https://img.shields.io/npm/v/@gramota/dcql?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/dcql) | Digital Credentials Query Language (OID4VP 2.0) |
+| [`@gramota/qr`](https://www.npmjs.com/package/@gramota/qr) [![npm](https://img.shields.io/npm/v/@gramota/qr?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/qr) | QR rendering for OID4VP / OID4VCI deep links — Strategy-pluggable renderer, three output formats |
 
 ### Cryptography & credentials
 

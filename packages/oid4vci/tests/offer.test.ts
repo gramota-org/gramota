@@ -3,6 +3,7 @@ import {
   Oid4vciError,
   parseCredentialOffer,
   parseOfferJson,
+  buildCredentialOfferUrl,
   extractPreAuthorizedCode,
   extractTxCodeRequirement,
   type CredentialOffer,
@@ -157,5 +158,42 @@ describe("extractTxCodeRequirement", () => {
 
   it("returns null when no tx_code is required", () => {
     expect(extractTxCodeRequirement(validOffer)).toBeNull();
+  });
+});
+
+describe("buildCredentialOfferUrl", () => {
+  it("round-trips through parseCredentialOffer (build → parse → equal)", () => {
+    const url = buildCredentialOfferUrl(validOffer);
+    expect(url.startsWith("openid-credential-offer://?credential_offer=")).toBe(true);
+    const roundTripped = parseCredentialOffer(url);
+    expect(roundTripped).toEqual(validOffer);
+  });
+
+  it("honours custom schemes", () => {
+    const url = buildCredentialOfferUrl(validOffer, { scheme: "haip://" });
+    expect(url.startsWith("haip://?credential_offer=")).toBe(true);
+  });
+
+  it("rejects offer missing credential_issuer", () => {
+    expect(() =>
+      // @ts-expect-error: missing required field
+      buildCredentialOfferUrl({ credential_configuration_ids: ["pid"] }),
+    ).toThrow(Oid4vciError);
+  });
+
+  it("rejects offer with empty credential_configuration_ids", () => {
+    expect(() =>
+      buildCredentialOfferUrl({
+        credential_issuer: "https://x.example",
+        credential_configuration_ids: [],
+        grants: {},
+      }),
+    ).toThrow(Oid4vciError);
+  });
+
+  it("rejects malformed scheme", () => {
+    expect(() =>
+      buildCredentialOfferUrl(validOffer, { scheme: "not a scheme" }),
+    ).toThrow(/scheme/i);
   });
 });

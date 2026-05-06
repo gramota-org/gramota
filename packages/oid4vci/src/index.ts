@@ -13,6 +13,7 @@ export {
 export {
   parseCredentialOffer,
   parseOfferJson,
+  buildCredentialOfferUrl,
   extractPreAuthorizedCode,
   extractTxCodeRequirement,
 } from "./offer.js";

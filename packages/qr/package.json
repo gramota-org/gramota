@@ -1,0 +1,59 @@
+{
+  "name": "@gramota/qr",
+  "version": "0.1.0",
+  "description": "QR-code rendering for EUDIW deep links — OID4VP authorization requests and OID4VCI credential offers, with Strategy-pluggable renderers.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@gramota/oid4vci": "workspace:*",
+    "@gramota/oid4vp": "workspace:*",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "vitest": "^2.1.0"
+  },
+  "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
+  "homepage": "https://github.com/gramota-org/gramota#readme",
+  "bugs": {
+    "url": "https://github.com/gramota-org/gramota/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "qr-code",
+    "qr",
+    "openid4vp",
+    "oid4vci",
+    "credential-offer",
+    "verifiable-presentation",
+    "eudi",
+    "deep-link"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gramota-org/gramota.git",
+    "directory": "packages/qr"
+  }
+}

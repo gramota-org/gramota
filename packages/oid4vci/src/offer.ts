@@ -157,3 +157,76 @@ export function extractTxCodeRequirement(
     offer.grants?.["urn:ietf:params:oauth:grant-type:pre-authorized_code"];
   return grant?.tx_code ?? null;
 }
+
+/**
+ * Build a Credential Offer URL — the inverse of {@link parseCredentialOffer}.
+ *
+ * Produces the by-value form (`?credential_offer=<encoded JSON>`).
+ * For the by-reference form (`?credential_offer_uri=<URL>`), build it
+ * yourself — it's a one-line `URLSearchParams` call and the choice of
+ * whether to host the offer JSON behind a URL is yours, not the
+ * library's.
+ *
+ * The `scheme` defaults to `openid-credential-offer://` per OID4VCI §4.1
+ * but custom schemes (`haip://`, `eudi-openid4vci://`, etc.) are common
+ * — pass any URI scheme that includes `://` and the wallet's preferred
+ * authority.
+ *
+ * @example
+ * ```ts
+ * const url = buildCredentialOfferUrl({
+ *   credential_issuer: "https://acme.gramota.dev",
+ *   credential_configuration_ids: ["urn:eudi:pid:1_sd_jwt_vc"],
+ *   grants: {
+ *     "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
+ *       "pre-authorized_code": "abc123",
+ *     },
+ *   },
+ * });
+ * // → openid-credential-offer://?credential_offer=%7B%22credential_issuer%22%3A...
+ * ```
+ *
+ * @throws {@link Oid4vciError} with `oid4vci.invalid_input` if the offer
+ *   is missing required fields, or `oid4vci.invalid_url` if `scheme`
+ *   is not a valid URI authority.
+ */
+export function buildCredentialOfferUrl(
+  offer: CredentialOffer,
+  options: { scheme?: string } = {},
+): string {
+  if (
+    offer === null ||
+    typeof offer !== "object" ||
+    typeof offer.credential_issuer !== "string" ||
+    offer.credential_issuer.length === 0
+  ) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "buildCredentialOfferUrl: offer.credential_issuer is required",
+    );
+  }
+  if (
+    !Array.isArray(offer.credential_configuration_ids) ||
+    offer.credential_configuration_ids.length === 0
+  ) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_input",
+      "buildCredentialOfferUrl: offer.credential_configuration_ids must be a non-empty array",
+    );
+  }
+
+  const scheme = options.scheme ?? "openid-credential-offer://";
+
+  // Validate the scheme is a usable URI base. We accept anything that
+  // looks like `<scheme>://` — the wallet vendor decides what their
+  // app is registered for.
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(scheme)) {
+    throw new Oid4vciError(
+      "oid4vci.invalid_url",
+      `buildCredentialOfferUrl: scheme "${scheme}" is not a valid URI authority`,
+    );
+  }
+
+  const json = JSON.stringify(offer);
+  return `${scheme}?credential_offer=${encodeURIComponent(json)}`;
+}
