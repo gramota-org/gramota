@@ -16,4 +16,6 @@ export type {
   SecurityCheck,
   SecurityCheckName,
   VerificationMetadata,
+  RequireInput,
+  RequireResult,
 } from "./types.js";

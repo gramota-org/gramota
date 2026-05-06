@@ -53,8 +53,28 @@ export interface VerifierConfig {
   maxClockSkewSeconds?: number;
 }
 
+/** Input passed to {@link VerifyOptions.require} predicates. */
+export interface RequireInput<TClaims = Record<string, unknown>> {
+  /** The disclosed claims — same shape as `result.claims` on success. */
+  readonly claims: TClaims;
+  /** Protocol metadata — same shape as `result.metadata` on success. */
+  readonly metadata: VerificationMetadata;
+}
+
+/**
+ * Return shape for {@link VerifyOptions.require} when the caller wants
+ * to attach a human-readable reason. Plain `boolean` is also accepted
+ * for the common case.
+ */
+export interface RequireResult {
+  readonly passed: boolean;
+  /** Shown in `result.reason` and the audit trail when `passed: false`.
+   * Default: `"require predicate returned false"`. */
+  readonly reason?: string;
+}
+
 /** Per-call options for `verifier.verify(...)`. */
-export interface VerifyOptions {
+export interface VerifyOptions<TClaims = Record<string, unknown>> {
   /** The challenge the verifier sent to the wallet. The KB-JWT's `nonce`
    * claim MUST equal this. Within-verifier replay protection. */
   nonce: string;
@@ -75,6 +95,36 @@ export interface VerifyOptions {
    * Has no effect when no `statusResolver` is configured on the Verifier.
    */
   requireStatus?: boolean;
+
+  /**
+   * Application-level predicate. Runs AFTER all crypto + status checks
+   * pass; receives the disclosed claims + protocol metadata; returns
+   * a boolean (or `{ passed, reason }` for a custom failure reason).
+   *
+   * If the predicate returns `false` (or `{ passed: false }`), the
+   * verification fails with `failedCheck: "require.predicate"` and the
+   * predicate's `reason` (or a default) becomes `result.reason`. The
+   * `require.predicate` entry is appended to `result.checks` either
+   * way, so audit dashboards see the same shape as for any other check.
+   *
+   * If the predicate throws, the throw propagates — the verifier does
+   * NOT silently treat exceptions as "passed: false". This is so
+   * caller bugs surface as crashes during dev, not as accepted
+   * presentations in production.
+   *
+   * @example
+   * ```ts
+   * await verifier.verify(token, {
+   *   nonce,
+   *   require: ({ claims }) =>
+   *     claims.age_over_18 === true &&
+   *     EU_COUNTRIES.has(claims.nationality as string),
+   * });
+   * ```
+   */
+  require?: (
+    input: RequireInput<TClaims>,
+  ) => boolean | RequireResult | Promise<boolean | RequireResult>;
 }
 
 /** A single security check, recorded for observability. Every check is
@@ -101,7 +151,12 @@ export type SecurityCheckName =
   | "kb-jwt.nonce"
   | "kb-jwt.time"
   | "kb-jwt.transcript"
-  | "status.check";
+  | "status.check"
+  /** Application-level predicate from {@link VerifyOptions.require}.
+   * Runs last; not part of the cryptographic protocol — semantically
+   * a customer business rule that determines whether the (already
+   * crypto-valid) presentation is acceptable for THIS endpoint. */
+  | "require.predicate";
 
 /** Protocol metadata extracted alongside the user-facing claims. */
 export interface VerificationMetadata {

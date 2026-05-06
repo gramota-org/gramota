@@ -93,7 +93,7 @@ export class Verifier {
    */
   async verify<TClaims = Record<string, unknown>>(
     presentationToken: string,
-    options: VerifyOptions,
+    options: VerifyOptions<TClaims>,
   ): Promise<VerifyResult<TClaims>> {
     if (typeof options.nonce !== "string" || options.nonce.length === 0) {
       throw new TypeError("verify: options.nonce is required");
@@ -270,7 +270,9 @@ export class Verifier {
       }
     }
 
-    // All checks passed — assemble the success result.
+    // All cryptographic checks passed. Extract the claims + metadata
+    // before running the optional application-level predicate so the
+    // predicate sees the same shape callers will see on success.
     const claims = stripMetadata(verifiedSdJwt.claims) as TClaims;
     const metadata = extractMetadata(
       parsed,
@@ -278,6 +280,34 @@ export class Verifier {
       this.audience,
       verifiedKb.holderKey,
     );
+
+    // 11. Application-level predicate (optional). Last gate, runs
+    //     after every protocol check. Lets callers express business
+    //     rules ("age ≥ 18", "EU resident", "credentialSubject.dob in
+    //     a specific decade") without polluting the protocol layer.
+    if (options.require !== undefined) {
+      let predicateOutcome;
+      try {
+        predicateOutcome = await options.require({ claims, metadata });
+      } catch (err) {
+        // Predicate threw — surface the throw verbatim. We don't
+        // silently treat it as failure: a buggy predicate is a
+        // caller bug, not a verification result.
+        throw err;
+      }
+      const passed =
+        typeof predicateOutcome === "boolean"
+          ? predicateOutcome
+          : Boolean(predicateOutcome.passed);
+      if (!passed) {
+        const reason =
+          typeof predicateOutcome === "boolean"
+            ? "require predicate returned false"
+            : (predicateOutcome.reason ?? "require predicate returned false");
+        return makeFailure(checks, "require.predicate", reason);
+      }
+      record(checks, "require.predicate", true);
+    }
 
     const success: SuccessResult<TClaims> = {
       ok: true,
@@ -347,7 +377,7 @@ export class Verifier {
    */
   async response<TClaims = Record<string, unknown>>(
     rawBody: string | URLSearchParams | Record<string, string>,
-    options: VerifyResponseOptions,
+    options: VerifyResponseOptions<TClaims>,
   ): Promise<VerifyResponseResult<TClaims>> {
     if (
       typeof options.expectedNonce !== "string" ||
@@ -398,11 +428,12 @@ export class Verifier {
     }
     const vpToken = response.vp_token;
 
-    const verifyOpts: VerifyOptions = { nonce: options.expectedNonce };
+    const verifyOpts: VerifyOptions<TClaims> = { nonce: options.expectedNonce };
     if (options.now !== undefined) verifyOpts.now = options.now;
     if (options.requireStatus !== undefined) {
       verifyOpts.requireStatus = options.requireStatus;
     }
+    if (options.require !== undefined) verifyOpts.require = options.require;
     const baseResult = await this.verify<TClaims>(vpToken, verifyOpts);
 
     return Object.assign({}, baseResult, {
@@ -452,7 +483,7 @@ export interface PresentationRequest {
 }
 
 /** Options for `verifier.response()`. */
-export interface VerifyResponseOptions {
+export interface VerifyResponseOptions<TClaims = Record<string, unknown>> {
   /** Required — the nonce used in the original request. */
   expectedNonce: string;
   /** Optional — when supplied, response.state MUST equal this. */
@@ -463,6 +494,9 @@ export interface VerifyResponseOptions {
    * status. Has effect only when the Verifier was constructed with a
    * `statusResolver`. */
   requireStatus?: boolean;
+  /** Forwarded to `verify()` — application-level predicate that runs
+   * after all crypto + status checks pass. See {@link VerifyOptions.require}. */
+  require?: VerifyOptions<TClaims>["require"];
 }
 
 // ---------------------------------------------------------------------------
