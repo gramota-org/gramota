@@ -136,7 +136,7 @@ describe("Verifier × StatusResolver — default StatusListResolver", () => {
       }),
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
     });
@@ -181,7 +181,7 @@ describe("Verifier × StatusResolver — default StatusListResolver", () => {
       }),
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
     });
@@ -205,7 +205,7 @@ describe("Verifier × StatusResolver — default StatusListResolver", () => {
       }),
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
     });
@@ -231,7 +231,7 @@ describe("Verifier × StatusResolver — default StatusListResolver", () => {
       }),
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
       requireStatus: true,
@@ -259,7 +259,7 @@ describe("Verifier × StatusResolver — default StatusListResolver", () => {
       // no statusResolver
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
     });
@@ -329,14 +329,14 @@ describe("Verifier × StatusResolver — extensibility (custom resolver)", () =>
       statusResolver: new IdxBasedResolver(new Set([13])),
     });
 
-    const okResult = await verifier.verify(goodCred, {
+    const okResult = await verifier.presentations.verify(goodCred, {
       nonce: NONCE,
       now: () => NOW_S,
     });
     expect(okResult.ok).toBe(true);
     if (!okResult.ok) throw new Error("expected ok for idx=7");
 
-    const badResult = await verifier.verify(badCred, {
+    const badResult = await verifier.presentations.verify(badCred, {
       nonce: NONCE,
       now: () => NOW_S,
     });
@@ -367,7 +367,7 @@ describe("Verifier × StatusResolver — extensibility (custom resolver)", () =>
       statusResolver: new ExplodingResolver(),
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: NONCE,
       now: () => NOW_S,
     });

@@ -1,6 +1,6 @@
 {
   "name": "@gramota/sd-jwt",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "SD-JWT-VC parser and verifier for the EU Digital Identity Wallet.",
   "license": "Apache-2.0",
   "type": "module",

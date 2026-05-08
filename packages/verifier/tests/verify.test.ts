@@ -118,7 +118,7 @@ describe("Verifier — happy path", () => {
   it("verifies an end-to-end presentation and returns claims + metadata", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -138,7 +138,7 @@ describe("Verifier — happy path", () => {
   it("strips iss/iat/exp/cnf/_sd/_sd_alg from claims", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     if (!result.ok) throw new Error("expected ok");
 
     expect(result.claims).not.toHaveProperty("iss");
@@ -152,7 +152,7 @@ describe("Verifier — happy path", () => {
   it("records every check as passed in result.checks", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     if (!result.ok) throw new Error("expected ok");
 
     const expected = [
@@ -180,7 +180,7 @@ describe("Verifier — happy path", () => {
     }
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify<MyClaims>(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify<MyClaims>(s.presentationToken, baseOpts());
     if (!result.ok) throw new Error("expected ok");
 
     // Type-level — won't compile if narrowing is broken.
@@ -198,14 +198,14 @@ describe("VerifyResult.unwrap()", () => {
   it("returns claims on success", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const claims = (await v.verify(s.presentationToken, baseOpts())).unwrap();
+    const claims = (await v.presentations.verify(s.presentationToken, baseOpts())).unwrap();
     expect(claims["given_name"]).toBe("John");
   });
 
   it("throws VerifierError on failure", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, {
+    const result = await v.presentations.verify(s.presentationToken, {
       ...baseOpts(),
       nonce: "wrong-nonce",
     });
@@ -215,7 +215,7 @@ describe("VerifyResult.unwrap()", () => {
   it("VerifierError carries the failure result for logging", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, {
+    const result = await v.presentations.verify(s.presentationToken, {
       ...baseOpts(),
       nonce: "wrong-nonce",
     });
@@ -239,7 +239,7 @@ describe("Verifier — failure classification", () => {
   it("structure.parse — malformed token", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify("not.a.valid.token", baseOpts());
+    const result = await v.presentations.verify("not.a.valid.token", baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("structure.parse");
@@ -249,7 +249,7 @@ describe("Verifier — failure classification", () => {
     const s = await setup();
     const wrong = await makeKey("ES256");
     const v = new Verifier({ audience: AUDIENCE, issuerKey: wrong.pub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("issuer.signature");
@@ -268,7 +268,7 @@ describe("Verifier — failure classification", () => {
     )}~${forged}~${s.presentationToken.substring(lastTilde + 1)}`;
 
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(tampered, baseOpts());
+    const result = await v.presentations.verify(tampered, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     // The forged disclosure either fails hash-binding (if injected before kb-jwt
@@ -318,7 +318,7 @@ describe("Verifier — failure classification", () => {
       audience: AUDIENCE,
       issuerKey: issuer.pub,
     });
-    const result = await v.verify(issuanceOnly, baseOpts());
+    const result = await v.presentations.verify(issuanceOnly, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("kb-jwt.present");
@@ -329,7 +329,7 @@ describe("Verifier — failure classification", () => {
     const s = await setup({ signKbWith: evil.priv });
 
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("kb-jwt.signature");
@@ -338,7 +338,7 @@ describe("Verifier — failure classification", () => {
   it("kb-jwt.audience — verifier mismatch", async () => {
     const s = await setup({ audience: "https://other-verifier.example.com" });
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("kb-jwt.audience");
@@ -347,7 +347,7 @@ describe("Verifier — failure classification", () => {
   it("kb-jwt.nonce — challenge mismatch", async () => {
     const s = await setup();
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, {
+    const result = await v.presentations.verify(s.presentationToken, {
       ...baseOpts(),
       nonce: "different-nonce",
     });
@@ -359,7 +359,7 @@ describe("Verifier — failure classification", () => {
   it("kb-jwt.time — KB-JWT too old", async () => {
     const s = await setup({ iat: NOW_S - 3600 });
     const v = new Verifier({ audience: AUDIENCE, issuerKey: s.issuerPub });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("kb-jwt.time");
@@ -404,7 +404,7 @@ describe("Verifier — configuration", () => {
       audience: AUDIENCE,
       trust: new StaticTrustResolver([s.issuerPub]),
     });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(true);
   });
 
@@ -418,7 +418,7 @@ describe("Verifier — configuration", () => {
         "https://other-issuer.example.com": [s.issuerPub],
       }),
     });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("trust.resolution");
@@ -433,7 +433,7 @@ describe("Verifier — configuration", () => {
       issuerKey: s.issuerPub,
       algorithms: ["RS256"],
     });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("issuer.signature");
@@ -448,7 +448,7 @@ describe("Verifier — configuration", () => {
       issuerKey: s.issuerPub,
       maxKbJwtAgeSeconds: 2,
     });
-    const result = await v.verify(s.presentationToken, baseOpts());
+    const result = await v.presentations.verify(s.presentationToken, baseOpts());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.failedCheck).toBe("kb-jwt.time");

@@ -1,4 +1,4 @@
-import type { Fetcher, FetcherResponse } from "@gramota/jose";
+import type { Fetcher, FetcherResponse } from "@gramota/core";
 import { Oid4vciError, type IssuerMetadata } from "./types.js";
 
 // Re-export so existing consumers of `@gramota/oid4vci` keep working

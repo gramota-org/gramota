@@ -170,7 +170,7 @@ describe("E2E with Presentation Exchange — verifier-driven disclosure selectio
       audience,
       issuerKey: issuer.publicJwk,
     });
-    const result = await verifier.verify(parsedResponse.vp_token as string, {
+    const result = await verifier.presentations.verify(parsedResponse.vp_token as string, {
       nonce,
       now: () => NOW_S,
     });

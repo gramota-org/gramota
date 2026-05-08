@@ -1,5 +1,18 @@
 # @gramota/sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @gramota/verifier@0.5.0
+  - @gramota/qr@0.4.0
+  - @gramota/jose@0.3.0
+  - @gramota/core@0.2.1
+  - @gramota/holder@0.1.3
+  - @gramota/issuer@0.3.2
+  - @gramota/trust@0.1.3
+
 ## 0.2.0
 
 ### Minor Changes

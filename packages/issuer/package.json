@@ -1,6 +1,6 @@
 {
   "name": "@gramota/issuer",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "EUDIW credential issuer — sign SD-JWT-VC credentials with selective disclosure and key binding.",
   "license": "Apache-2.0",
   "type": "module",

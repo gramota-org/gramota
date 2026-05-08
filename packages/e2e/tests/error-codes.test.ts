@@ -193,7 +193,7 @@ describe("Error codes — present, typed, switchable", () => {
       audience: "https://OTHER-VERIFIER.example.com",
       issuerKey: issuerKey.publicJwk,
     });
-    const result = await verifier.verify(presentation, { nonce: "n-vc" });
+    const result = await verifier.presentations.verify(presentation, { nonce: "n-vc" });
 
     expect(result.ok).toBe(false);
     if (result.ok) return;

@@ -19,7 +19,8 @@
  */
 
 import { exportJWK, generateKeyPair } from "jose";
-import { mockFetcherResponse, type JsonWebKey } from "@gramota/jose";
+import { type JsonWebKey } from "@gramota/jose";
+import { mockFetcherResponse } from "@gramota/core";
 import { Issuer } from "@gramota/issuer";
 import { Holder } from "@gramota/holder";
 import { Verifier } from "@gramota/verifier";
@@ -159,7 +160,7 @@ export async function runSelfLoop(): Promise<void> {
       fetcher: statusFetcher,
     }),
   });
-  const presentationRequest = verifier.request({
+  const presentationRequest = verifier.requests.create({
     baseUrl: "openid4vp://authorize",
     nonce: NONCE,
     state: "demo-state",
@@ -179,7 +180,7 @@ export async function runSelfLoop(): Promise<void> {
 
   // === Verifier verifies ===
   step(6, "Verifier runs all 10 security checks (incl. status)");
-  const result = await verifier.response(responded.body, {
+  const result = await verifier.responses.verify(responded.body, {
     expectedNonce: NONCE,
     expectedState: "demo-state",
     requireStatus: true,

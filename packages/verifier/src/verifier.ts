@@ -90,18 +90,17 @@ export class Verifier {
     //   verifier.responses.verify(rawBody, opts)
     //   verifier.requests.create(opts)
     //
-    // The flat methods on this class (`verify`, `response`, `request`)
-    // are kept for back-compat in 0.3.0 and marked `@deprecated`.
-    // Removed in 1.0 — migrate by adding the resource segment.
+    // The flat methods (`verify`, `response`, `request`) were dropped
+    // in 0.5.0 — this is the only public shape now.
     // ────────────────────────────────────────────────────────────────
     this.presentations = {
-      verify: (token, opts) => this.verify(token, opts),
+      verify: (token, opts) => this.verifyPresentationImpl(token, opts),
     };
     this.responses = {
-      verify: (rawBody, opts) => this.response(rawBody, opts),
+      verify: (rawBody, opts) => this.verifyResponseImpl(rawBody, opts),
     };
     this.requests = {
-      create: (opts) => this.request(opts),
+      create: (opts) => this.createRequestImpl(opts),
     };
   }
 
@@ -133,16 +132,14 @@ export class Verifier {
    * which check failed. On success, returns the disclosed claims plus
    * protocol metadata plus the full audit trail of checks performed.
    *
-   * @deprecated Use `verifier.presentations.verify(token, opts)` instead.
-   *   Removed in 1.0. The flat shape predates Gramota's Stripe-style
-   *   namespacing — the namespaced version is the supported surface.
+   * @internal Public surface is `verifier.presentations.verify(token, opts)`.
    */
-  async verify<TClaims = Record<string, unknown>>(
+  private async verifyPresentationImpl<TClaims = Record<string, unknown>>(
     presentationToken: string,
     options: VerifyOptions<TClaims>,
   ): Promise<VerifyResult<TClaims>> {
     if (typeof options.nonce !== "string" || options.nonce.length === 0) {
-      throw new TypeError("verify: options.nonce is required");
+      throw new TypeError("verifier.presentations.verify: options.nonce is required");
     }
 
     const checks: SecurityCheck[] = [];
@@ -369,14 +366,14 @@ export class Verifier {
   /**
    * Build an OID4VP Authorization Request URL to share with the wallet.
    *
-   * @deprecated Use `verifier.requests.create(opts)` instead. Removed in 1.0.
+   * @internal Public surface is `verifier.requests.create(opts)`.
    */
-  request(options: PresentationRequestOptions): PresentationRequest {
+  private createRequestImpl(options: PresentationRequestOptions): PresentationRequest {
     if (typeof options.baseUrl !== "string" || options.baseUrl.length === 0) {
-      throw new TypeError("verifier.request: baseUrl is required");
+      throw new TypeError("verifier.requests.create: baseUrl is required");
     }
     if (typeof options.nonce !== "string" || options.nonce.length === 0) {
-      throw new TypeError("verifier.request: nonce is required");
+      throw new TypeError("verifier.requests.create: nonce is required");
     }
     if (
       options.presentationDefinition !== undefined &&
@@ -422,13 +419,12 @@ export class Verifier {
   /**
    * Process an OID4VP Authorization Response body end-to-end:
    * parse the form body, enforce CSRF state matching, and verify the
-   * vp_token cryptographically. Returns the same result shape as `verify()`
-   * plus the parsed transport envelope.
+   * vp_token cryptographically. Returns the same result shape as
+   * `presentations.verify` plus the parsed transport envelope.
    *
-   * @deprecated Use `verifier.responses.verify(rawBody, opts)` instead.
-   *   Removed in 1.0.
+   * @internal Public surface is `verifier.responses.verify(rawBody, opts)`.
    */
-  async response<TClaims = Record<string, unknown>>(
+  private async verifyResponseImpl<TClaims = Record<string, unknown>>(
     rawBody: string | URLSearchParams | Record<string, string>,
     options: VerifyResponseOptions<TClaims>,
   ): Promise<VerifyResponseResult<TClaims>> {
@@ -436,7 +432,7 @@ export class Verifier {
       typeof options.expectedNonce !== "string" ||
       options.expectedNonce.length === 0
     ) {
-      throw new TypeError("verifier.response: expectedNonce is required");
+      throw new TypeError("verifier.responses.verify: expectedNonce is required");
     }
 
     let response: AuthorizationResponse;
@@ -487,7 +483,7 @@ export class Verifier {
       verifyOpts.requireStatus = options.requireStatus;
     }
     if (options.require !== undefined) verifyOpts.require = options.require;
-    const baseResult = await this.verify<TClaims>(vpToken, verifyOpts);
+    const baseResult = await this.verifyPresentationImpl<TClaims>(vpToken, verifyOpts);
 
     return Object.assign({}, baseResult, {
       response,

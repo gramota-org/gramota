@@ -1,6 +1,6 @@
 {
   "name": "@gramota/sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Top-level facade over @gramota/verifier, @gramota/issuer, @gramota/holder, and @gramota/qr — Stripe-shaped single-import entry point with shared options.",
   "license": "Apache-2.0",
   "type": "module",

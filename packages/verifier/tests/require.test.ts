@@ -88,7 +88,7 @@ describe("VerifyOptions.require — application predicate", () => {
     });
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: NONCE,
       now: fixedNow,
       require: ({ claims }) => claims["age_over_18"] === true,
@@ -108,7 +108,7 @@ describe("VerifyOptions.require — application predicate", () => {
     });
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: NONCE,
       now: fixedNow,
       require: ({ claims }) => claims["age_over_18"] === true,
@@ -126,7 +126,7 @@ describe("VerifyOptions.require — application predicate", () => {
     });
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: NONCE,
       now: fixedNow,
       require: ({ claims }) =>
@@ -150,7 +150,7 @@ describe("VerifyOptions.require — application predicate", () => {
 
     let seenClaims: unknown;
     let seenMetadata: unknown;
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: NONCE,
       now: fixedNow,
       require: ({ claims, metadata }) => {
@@ -175,7 +175,7 @@ describe("VerifyOptions.require — application predicate", () => {
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
     let asyncDone = false;
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: NONCE,
       now: fixedNow,
       require: async () => {
@@ -195,7 +195,7 @@ describe("VerifyOptions.require — application predicate", () => {
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
     await expect(
-      verifier.verify(token, {
+      verifier.presentations.verify(token, {
         nonce: NONCE,
         now: fixedNow,
         require: () => {
@@ -212,7 +212,7 @@ describe("VerifyOptions.require — application predicate", () => {
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
     let predicateCalled = false;
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: "wrong-nonce",
       now: fixedNow,
       require: () => {
@@ -235,7 +235,7 @@ describe("VerifyOptions.require — application predicate", () => {
     const verifier = new Verifier({ audience: AUDIENCE, issuerKey: issuerPub });
 
     const EU = new Set(["BG", "FR", "DE"]);
-    const r = await verifier.verify(token, {
+    const r = await verifier.presentations.verify(token, {
       nonce: NONCE,
       now: fixedNow,
       require: ({ claims }) =>

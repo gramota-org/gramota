@@ -1,5 +1,82 @@
 # @gramota/qr
 
+## 0.4.0
+
+### Minor Changes
+
+- **Breaking — back-compat aliases removed.**
+
+  The deprecated shapes from the previous release are gone. There's now
+  exactly one way to call each thing:
+
+  ### `@gramota/verifier@0.5.0`
+
+  The flat methods (`verifier.verify`, `verifier.response`, `verifier.request`)
+  have been removed. Use the Stripe-shaped namespaces:
+
+  ```ts
+  // before
+  await verifier.verify(token, { nonce });
+  await verifier.response(rawBody, { expectedNonce });
+  verifier.request({ baseUrl, clientId, nonce });
+
+  // after
+  await verifier.presentations.verify(token, { nonce });
+  await verifier.responses.verify(rawBody, { expectedNonce });
+  verifier.requests.create({ baseUrl, clientId, nonce });
+  ```
+
+  ### `@gramota/qr@0.4.0`
+
+  The named factory re-exports (`fromUrl`, `fromAuthorizationRequest`,
+  `fromCredentialOffer`) and the `QrFactoryOptions` type alias have been
+  removed. Use the singleton `qr` or construct your own `QrClient`:
+
+  ```ts
+  // before — both worked
+  import { fromUrl } from "@gramota/qr";
+  const code = fromUrl("openid4vp://…");
+
+  // after — pick one
+  import { qr } from "@gramota/qr";
+  const code = qr.fromUrl("openid4vp://…");
+  // or, with custom options:
+  import { QrClient } from "@gramota/qr";
+  const client = new QrClient({ errorCorrection: "H" });
+  const code = client.fromUrl("openid4vp://…");
+  ```
+
+  ### `@gramota/jose@0.3.0`
+
+  `Fetcher`, `FetcherResponse`, and `mockFetcherResponse` are no longer
+  re-exported. Import them from `@gramota/core`:
+
+  ```ts
+  // before
+  import { Fetcher, mockFetcherResponse } from "@gramota/jose";
+
+  // after
+  import { Fetcher, mockFetcherResponse } from "@gramota/core";
+  ```
+
+  ### `@gramota/core@0.2.1`
+
+  Patch — touched in lockstep with jose; `@gramota/core` is the canonical
+  home for `Fetcher` now that jose stops re-exporting it.
+
+  ### Migration
+
+  If you upgraded to `0.4.0`/`0.3.0` last release and saw deprecation
+  warnings, fix the call sites the warnings pointed at — that's the only
+  change you need. The runtime behaviour is identical.
+
+### Patch Changes
+
+- Updated dependencies
+  - @gramota/core@0.2.1
+  - @gramota/oid4vci@0.3.1
+  - @gramota/oid4vp@0.2.2
+
 ## 0.3.0
 
 ### Minor Changes

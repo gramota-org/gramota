@@ -71,7 +71,7 @@ describe("Issuer → Holder → Verifier — class APIs only", () => {
       issuerKey: issuerKey.publicJwk,
     });
 
-    const created = verifier.request({
+    const created = verifier.requests.create({
       baseUrl: "openid4vp://authorize",
       nonce: "issuer-chain-nonce",
       state: "issuer-chain-state",
@@ -98,7 +98,7 @@ describe("Issuer → Holder → Verifier — class APIs only", () => {
       now: () => NOW_S - 5,
     });
 
-    const result = await verifier.response(respond.body, {
+    const result = await verifier.responses.verify(respond.body, {
       expectedNonce: "issuer-chain-nonce",
       expectedState: "issuer-chain-state",
       now: () => NOW_S,

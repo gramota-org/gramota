@@ -50,6 +50,9 @@ importers:
 
   packages/demo:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/credential-format':
         specifier: workspace:*
         version: link:../credential-format
@@ -86,6 +89,9 @@ importers:
 
   packages/e2e:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/dcql':
         specifier: workspace:*
         version: link:../dcql

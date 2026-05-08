@@ -1,6 +1,6 @@
 {
   "name": "@gramota/e2e",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "description": "Cross-package E2E tests exercising every public API together. Not published.",
   "license": "Apache-2.0",
@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@gramota/core": "workspace:*",
     "@gramota/dcql": "workspace:*",
     "@gramota/holder": "workspace:*",
     "@gramota/issuer": "workspace:*",

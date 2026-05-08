@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { mockFetcherResponse, type Fetcher } from "@gramota/jose";
+import { mockFetcherResponse, type Fetcher } from "@gramota/core";
 import { issueSdJwt } from "@gramota/sd-jwt";
 import {
   StaticTrustResolver,
@@ -77,7 +77,7 @@ describe("E2E scenario 1 — single-issuer happy path", () => {
       audience: "https://verifier.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: "scenario-1",
       now: () => NOW_S,
     });
@@ -155,7 +155,7 @@ describe("E2E scenario 2 — multi-issuer holder", () => {
       nonce: "n-id",
       now: () => NOW_S - 5,
     });
-    const idResult = await verifierA.verify(idPresentation, {
+    const idResult = await verifierA.presentations.verify(idPresentation, {
       nonce: "n-id",
       now: () => NOW_S,
     });
@@ -174,7 +174,7 @@ describe("E2E scenario 2 — multi-issuer holder", () => {
       nonce: "n-edu",
       now: () => NOW_S - 5,
     });
-    const eduResult = await verifierB.verify(eduPresentation, {
+    const eduResult = await verifierB.presentations.verify(eduPresentation, {
       nonce: "n-edu",
       now: () => NOW_S,
     });
@@ -186,7 +186,7 @@ describe("E2E scenario 2 — multi-issuer holder", () => {
     });
 
     // The "wrong" verifier rejects credentials from the other issuer
-    const wrongResult = await verifierA.verify(eduPresentation, {
+    const wrongResult = await verifierA.presentations.verify(eduPresentation, {
       nonce: "n-edu",
       now: () => NOW_S,
     });
@@ -260,11 +260,11 @@ describe("E2E scenario 3 — issuer key rotation", () => {
       now: () => NOW_S - 5,
     });
 
-    const resOld = await verifier.verify(presOld, {
+    const resOld = await verifier.presentations.verify(presOld, {
       nonce: "rot-1",
       now: () => NOW_S,
     });
-    const resNew = await verifier.verify(presNew, {
+    const resNew = await verifier.presentations.verify(presNew, {
       nonce: "rot-2",
       now: () => NOW_S,
     });
@@ -324,7 +324,7 @@ describe("E2E scenario 4 — JwksUrlTrustResolver with mock HTTP", () => {
       now: () => NOW_S - 5,
     });
 
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce: "jwks-1",
       now: () => NOW_S,
     });
@@ -339,7 +339,7 @@ describe("E2E scenario 4 — JwksUrlTrustResolver with mock HTTP", () => {
       nonce: "jwks-2",
       now: () => NOW_S - 5,
     });
-    const result2 = await verifier.verify(pres2, {
+    const result2 = await verifier.presentations.verify(pres2, {
       nonce: "jwks-2",
       now: () => NOW_S,
     });
@@ -387,7 +387,7 @@ describe("E2E scenario 5 — cross-verifier replay rejection", () => {
       audience: "https://verifier-b.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const result = await verifierB.verify(presentation, {
+    const result = await verifierB.presentations.verify(presentation, {
       nonce: "n-1",
       now: () => NOW_S,
     });
@@ -447,7 +447,7 @@ describe("E2E scenario 6 — tampered presentations are rejected", () => {
       audience: "https://v.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const result = await verifier.verify(tampered, {
+    const result = await verifier.presentations.verify(tampered, {
       nonce: "tamper-1",
       now: () => NOW_S,
     });
@@ -514,7 +514,7 @@ describe("E2E scenario 7 — multiple presentations from one credential", () => 
         nonce,
         now: () => NOW_S - 5,
       });
-      const result = await verifier.verify(pres, {
+      const result = await verifier.presentations.verify(pres, {
         nonce,
         now: () => NOW_S,
       });

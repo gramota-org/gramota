@@ -1,4 +1,5 @@
-import { verifyJws, type Fetcher, type JsonWebKey } from "@gramota/jose";
+import { verifyJws, type JsonWebKey } from "@gramota/jose";
+import { type Fetcher } from "@gramota/core";
 import { parseStatusListToken } from "./parse.js";
 import { StatusListError, type StatusList } from "./types.js";
 

@@ -1,5 +1,14 @@
 # @gramota/oid4vci
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @gramota/jose@0.3.0
+  - @gramota/core@0.2.1
+  - @gramota/credential-format@0.1.3
+
 ## 0.3.0
 
 ### Minor Changes

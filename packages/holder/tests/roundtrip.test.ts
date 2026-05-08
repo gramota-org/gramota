@@ -97,7 +97,7 @@ describe("Issuer → Holder → Verifier roundtrip", () => {
       audience,
       issuerKey: issuer.pub,
     });
-    const result = await verifier.verify(presentation, {
+    const result = await verifier.presentations.verify(presentation, {
       nonce,
       now: () => NOW,
     });
@@ -158,7 +158,7 @@ describe("Issuer → Holder → Verifier roundtrip", () => {
       audience: "https://verifier-b.example.com",
       issuerKey: issuer.pub,
     });
-    const result = await verifierB.verify(presentation, {
+    const result = await verifierB.presentations.verify(presentation, {
       nonce: "n-1",
       now: () => NOW,
     });

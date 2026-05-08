@@ -1,4 +1,5 @@
-import type { Fetcher, JsonWebKey } from "@gramota/jose";
+import type { JsonWebKey } from "@gramota/jose";
+import type { Fetcher } from "@gramota/core";
 import {
   TrustResolutionError,
   type TrustContext,

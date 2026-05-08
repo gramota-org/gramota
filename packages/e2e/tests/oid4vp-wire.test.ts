@@ -134,7 +134,7 @@ describe("OID4VP full-wire E2E — verifier ↔ wallet ↔ verifier", () => {
       audience: verifierAud,
       issuerKey: issuer.publicJwk,
     });
-    const result = await verifier.verify(parsedResponse.vp_token as string, {
+    const result = await verifier.presentations.verify(parsedResponse.vp_token as string, {
       nonce,
       now: () => NOW_S,
     });

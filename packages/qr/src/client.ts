@@ -131,25 +131,3 @@ export class QrClient {
  * by constructing your own `new QrClient({...})`.
  */
 export const qr: QrClient = new QrClient();
-
-/* ------------------------------------------------------------------
- * Back-compat re-exports.
- *
- * Pre-0.2.0 the public surface was three named functions plus a
- * frozen `qr` object literal. Both shapes still work — the named
- * functions delegate to the singleton, and `qr` is now a class
- * instance with the same method names.
- * ------------------------------------------------------------------ */
-export const fromUrl: QrClient["fromUrl"] = (url, options) =>
-  qr.fromUrl(url, options);
-export const fromAuthorizationRequest: QrClient["fromAuthorizationRequest"] = (
-  request,
-  options,
-) => qr.fromAuthorizationRequest(request, options);
-export const fromCredentialOffer: QrClient["fromCredentialOffer"] = (
-  offer,
-  options,
-) => qr.fromCredentialOffer(offer, options);
-
-/** @deprecated alias for {@link QrClientOptions} — kept for source compat. */
-export type QrFactoryOptions = QrClientOptions;

@@ -1,5 +1,13 @@
 # @gramota/sd-jwt
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @gramota/jose@0.3.0
+  - @gramota/core@0.2.1
+
 ## 0.2.1
 
 ### Patch Changes

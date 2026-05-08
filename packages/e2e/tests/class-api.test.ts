@@ -54,7 +54,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       issuerKey: issuer.publicJwk,
     });
 
-    const created = verifier.request({
+    const created = verifier.requests.create({
       baseUrl: "openid4vp://authorize",
       nonce: "class-api-nonce",
       state: "class-api-state",
@@ -94,7 +94,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
     expect(respond.body).toContain("state=class-api-state");
 
     // ---- VERIFIER verifies the response via class method ----
-    const result = await verifier.response(respond.body, {
+    const result = await verifier.responses.verify(respond.body, {
       expectedNonce: "class-api-nonce",
       expectedState: "class-api-state",
       now: () => NOW_S,
@@ -136,7 +136,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       audience: "https://v.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const created = verifier.request({
+    const created = verifier.requests.create({
       baseUrl: "openid4vp://",
       nonce: "n",
       state: "expected-state",
@@ -156,7 +156,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       now: () => NOW_S - 5,
     });
 
-    const result = await verifier.response(respond.body, {
+    const result = await verifier.responses.verify(respond.body, {
       expectedNonce: "n",
       expectedState: "WRONG-STATE",
       now: () => NOW_S,
@@ -193,7 +193,7 @@ describe("Class-based API — full OID4VP flow without standalone functions", ()
       audience: "https://v.example.com",
       issuerKey: issuer.publicJwk,
     });
-    const created = verifier.request({
+    const created = verifier.requests.create({
       baseUrl: "openid4vp://",
       nonce: "n",
       responseUri: "https://v.example.com/cb",

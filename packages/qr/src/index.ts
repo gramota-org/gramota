@@ -23,11 +23,7 @@
 export {
   QrClient,
   qr,
-  fromUrl,
-  fromAuthorizationRequest,
-  fromCredentialOffer,
   type QrClientOptions,
-  type QrFactoryOptions,
 } from "./client.js";
 export { QrCode } from "./qr-code.js";
 export {

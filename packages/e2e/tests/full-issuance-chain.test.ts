@@ -166,7 +166,7 @@ describe("Full issuance + presentation chain through every package", () => {
       audience,
       issuerKey: issuerKey.pub,
     });
-    const created = verifier.request({
+    const created = verifier.requests.create({
       baseUrl: "openid4vp://authorize",
       nonce: "chain-nonce",
       state: "chain-state",
@@ -195,7 +195,7 @@ describe("Full issuance + presentation chain through every package", () => {
     });
 
     // ---- VERIFIER verifies ----
-    const result = await verifier.response(response.body, {
+    const result = await verifier.responses.verify(response.body, {
       expectedNonce: "chain-nonce",
       expectedState: "chain-state",
       now: () => NOW_S,
