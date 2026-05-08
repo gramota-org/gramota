@@ -1,6 +1,6 @@
 {
   "name": "@gramota/demo",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "description": "Runnable CLI demos for the Gramota SDK. Local self-loop + live EU PID receipt.",
   "license": "Apache-2.0",

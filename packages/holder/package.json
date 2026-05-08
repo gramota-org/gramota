@@ -1,7 +1,7 @@
 {
   "name": "@gramota/holder",
-  "version": "0.1.1",
-  "description": "Headless EUDIW holder/wallet \u2014 receive credentials, store them, build presentations. Pure Node, no UI, IETF SD-JWT-VC \u00a76 compliant.",
+  "version": "0.1.2",
+  "description": "Headless EUDIW holder/wallet — receive credentials, store them, build presentations. Pure Node, no UI, IETF SD-JWT-VC §6 compliant.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",

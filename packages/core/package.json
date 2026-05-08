@@ -1,6 +1,6 @@
 {
   "name": "@gramota/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared primitives for the Gramota SDK — HTTP transport interface, base error class, common types. Imported by every other @gramota package.",
   "license": "Apache-2.0",
   "type": "module",
