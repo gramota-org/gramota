@@ -1,5 +1,23 @@
 # @gramota/e2e
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [846a74a]
+- Updated dependencies [cb462fa]
+  - @gramota/oid4vci@0.3.0
+  - @gramota/verifier@0.4.0
+  - @gramota/jose@0.2.1
+  - @gramota/issuer@0.3.1
+  - @gramota/holder@0.1.2
+  - @gramota/dcql@0.1.2
+  - @gramota/oid4vp@0.2.1
+  - @gramota/presentation-exchange@0.1.2
+  - @gramota/sd-jwt@0.2.1
+  - @gramota/status-list@0.1.2
+  - @gramota/trust@0.1.2
+
 ## 0.0.2
 
 ### Patch Changes
