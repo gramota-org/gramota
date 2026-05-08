@@ -1,6 +1,6 @@
 {
   "name": "@gramota/jose",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "JWS signing and verification for the EU Digital Identity Wallet, ES256/EdDSA/RS256/PS256 with strict algorithm allowlists.",
   "license": "Apache-2.0",
   "type": "module",
