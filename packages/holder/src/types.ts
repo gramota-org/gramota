@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 import type { JsonWebKey, Signer, SupportedAlg } from "@gramota/jose";
 import type { ParsedSdJwt } from "@gramota/sd-jwt";
 
@@ -108,18 +110,16 @@ export type HolderErrorCode =
   | "holder.multi_credential_unsupported"
   | "holder.unknown_flow";
 
-export class HolderError extends Error {
-  override readonly name = "HolderError";
-  readonly code: HolderErrorCode;
+export class HolderError extends GramotaError {
+  override readonly code: HolderErrorCode;
+
   constructor(
     code: HolderErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "HolderError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

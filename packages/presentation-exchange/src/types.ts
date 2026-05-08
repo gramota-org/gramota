@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * DIF Presentation Exchange v2 types — what the verifier asks for, and how
  * the holder responds.
@@ -128,18 +130,16 @@ export interface DcqlCredentialSet {
   purpose?: string;
 }
 
-export class PresentationExchangeError extends Error {
-  override readonly name = "PresentationExchangeError";
-  readonly code: PresentationExchangeErrorCode;
+export class PresentationExchangeError extends GramotaError {
+  override readonly code: PresentationExchangeErrorCode;
+
   constructor(
     code: PresentationExchangeErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "PresentationExchangeError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * OID4VP Final 1.0 wire-format types.
  * Spec: https://openid.net/specs/openid-4-verifiable-presentations-1_0.html
@@ -138,19 +140,16 @@ export type Oid4vpErrorCode =
   | "oid4vp.cert_generation_failed"
   | "oid4vp.jar_signing_failed";
 
-export class Oid4vpError extends Error {
-  override readonly name = "Oid4vpError";
-  readonly code: Oid4vpErrorCode;
+export class Oid4vpError extends GramotaError {
+  override readonly code: Oid4vpErrorCode;
 
   constructor(
     code: Oid4vpErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "Oid4vpError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

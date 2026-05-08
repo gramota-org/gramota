@@ -1,22 +1,34 @@
 /**
  * `@gramota/qr` public API.
  *
- * Most consumers want the namespaced object:
+ * Two patterns work — pick whichever fits:
  *
- *   import { qr } from "@gramota/qr";
- *   const code = qr.fromUrl("openid4vp://...");
- *   const dataUrl = await code.toDataUrl();
+ *   1. **Default singleton** (zero config):
+ *      ```ts
+ *      import { qr } from "@gramota/qr";
+ *      const code = qr.fromUrl("openid4vp://…");
+ *      ```
  *
- * Tree-shakers and people swapping renderers want the named exports
- * (factories, `QrCode`, `DefaultQrRenderer`, `QrRenderer` interface).
+ *   2. **Custom client** (custom renderer, default options):
+ *      ```ts
+ *      import { QrClient } from "@gramota/qr";
+ *      const qr = new QrClient({ errorCorrection: "H", width: 512 });
+ *      const code = qr.fromUrl("openid4vp://…");
+ *      ```
+ *
+ * Tree-shakers can also import the named factories directly
+ * (`fromUrl`, `fromAuthorizationRequest`, `fromCredentialOffer`) —
+ * they delegate to the singleton.
  */
 export {
+  QrClient,
   qr,
   fromUrl,
   fromAuthorizationRequest,
   fromCredentialOffer,
+  type QrClientOptions,
   type QrFactoryOptions,
-} from "./qr.js";
+} from "./client.js";
 export { QrCode } from "./qr-code.js";
 export {
   DefaultQrRenderer,

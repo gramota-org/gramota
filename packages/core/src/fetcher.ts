@@ -17,6 +17,11 @@
  *
  * If you have a `globalThis.fetch`, it satisfies this type structurally —
  * just pass it directly: `new JwksUrlTrustResolver({ fetcher: fetch })`.
+ *
+ * Lives in `@gramota/core` because every transport-touching package
+ * (jose, oid4vci, oid4vp, status-list, holder, issuer, verifier) needs
+ * the same shape. Putting it in `@gramota/jose` was a historical
+ * accident — `@gramota/jose` is for crypto, not HTTP.
  */
 
 /** Subset of the Web `Response` shape that Gramota libraries actually

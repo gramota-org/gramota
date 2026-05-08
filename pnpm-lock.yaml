@@ -27,10 +27,19 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@20.19.39)
 
-  packages/credential-format: {}
+  packages/core: {}
+
+  packages/credential-format:
+    dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/dcql:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
@@ -117,6 +126,9 @@ importers:
 
   packages/holder:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
@@ -145,6 +157,9 @@ importers:
 
   packages/issuer:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
@@ -158,12 +173,18 @@ importers:
 
   packages/jose:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       jose:
         specifier: ^5.9.6
         version: 5.10.0
 
   packages/oid4vci:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/credential-format':
         specifier: workspace:*
         version: link:../credential-format
@@ -183,6 +204,9 @@ importers:
 
   packages/oid4vp:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
@@ -198,12 +222,18 @@ importers:
 
   packages/presentation-exchange:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
 
   packages/qr:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/oid4vci':
         specifier: workspace:*
         version: link:../oid4vci
@@ -223,6 +253,9 @@ importers:
 
   packages/sd-jwt:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
@@ -231,8 +264,39 @@ importers:
         specifier: ^5.9.6
         version: 5.10.0
 
+  packages/sdk:
+    dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
+      '@gramota/holder':
+        specifier: workspace:*
+        version: link:../holder
+      '@gramota/issuer':
+        specifier: workspace:*
+        version: link:../issuer
+      '@gramota/jose':
+        specifier: workspace:*
+        version: link:../jose
+      '@gramota/qr':
+        specifier: workspace:*
+        version: link:../qr
+      '@gramota/trust':
+        specifier: workspace:*
+        version: link:../trust
+      '@gramota/verifier':
+        specifier: workspace:*
+        version: link:../verifier
+    devDependencies:
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
+
   packages/status-list:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
@@ -249,12 +313,18 @@ importers:
 
   packages/trust:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
 
   packages/verifier:
     dependencies:
+      '@gramota/core':
+        specifier: workspace:*
+        version: link:../core
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose

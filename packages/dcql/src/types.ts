@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * DCQL — Digital Credentials Query Language (OID4VP 2.0).
  * Spec: OID4VP 2.0 §6 (DCQL).
@@ -57,18 +59,16 @@ export type DcqlErrorCode =
   | "dcql.unsatisfiable"
   | "dcql.format_unsupported";
 
-export class DcqlError extends Error {
-  override readonly name = "DcqlError";
-  readonly code: DcqlErrorCode;
+export class DcqlError extends GramotaError {
+  override readonly code: DcqlErrorCode;
+
   constructor(
     code: DcqlErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "DcqlError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

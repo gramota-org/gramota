@@ -82,7 +82,49 @@ export class Verifier {
       config.maxKbJwtAgeSeconds ?? DEFAULT_MAX_AGE_S;
     this.maxClockSkewSeconds =
       config.maxClockSkewSeconds ?? DEFAULT_CLOCK_SKEW_S;
+
+    // ────────────────────────────────────────────────────────────────
+    // Stripe-shaped resource namespaces.
+    //
+    //   verifier.presentations.verify(token, opts)
+    //   verifier.responses.verify(rawBody, opts)
+    //   verifier.requests.create(opts)
+    //
+    // The flat methods on this class (`verify`, `response`, `request`)
+    // are kept for back-compat in 0.3.0 and marked `@deprecated`.
+    // Removed in 1.0 — migrate by adding the resource segment.
+    // ────────────────────────────────────────────────────────────────
+    this.presentations = {
+      verify: (token, opts) => this.verify(token, opts),
+    };
+    this.responses = {
+      verify: (rawBody, opts) => this.response(rawBody, opts),
+    };
+    this.requests = {
+      create: (opts) => this.request(opts),
+    };
   }
+
+  /** Verify a presentation token. Stripe-shaped surface. */
+  readonly presentations: {
+    verify<TClaims = Record<string, unknown>>(
+      presentationToken: string,
+      options: VerifyOptions<TClaims>,
+    ): Promise<VerifyResult<TClaims>>;
+  };
+
+  /** Verify an OID4VP authorization response body. Stripe-shaped surface. */
+  readonly responses: {
+    verify<TClaims = Record<string, unknown>>(
+      rawBody: string | URLSearchParams | Record<string, string>,
+      options: VerifyResponseOptions<TClaims>,
+    ): Promise<VerifyResponseResult<TClaims>>;
+  };
+
+  /** Build a signed presentation request for the wallet. Stripe-shaped surface. */
+  readonly requests: {
+    create(options: PresentationRequestOptions): PresentationRequest;
+  };
 
   /**
    * Verify an SD-JWT-VC presentation token end-to-end.
@@ -90,6 +132,10 @@ export class Verifier {
    * Runs 9 security checks in order; stops at the first failure and reports
    * which check failed. On success, returns the disclosed claims plus
    * protocol metadata plus the full audit trail of checks performed.
+   *
+   * @deprecated Use `verifier.presentations.verify(token, opts)` instead.
+   *   Removed in 1.0. The flat shape predates Gramota's Stripe-style
+   *   namespacing — the namespaced version is the supported surface.
    */
   async verify<TClaims = Record<string, unknown>>(
     presentationToken: string,
@@ -320,7 +366,11 @@ export class Verifier {
     return success;
   }
 
-  /** Build an OID4VP Authorization Request URL to share with the wallet. */
+  /**
+   * Build an OID4VP Authorization Request URL to share with the wallet.
+   *
+   * @deprecated Use `verifier.requests.create(opts)` instead. Removed in 1.0.
+   */
   request(options: PresentationRequestOptions): PresentationRequest {
     if (typeof options.baseUrl !== "string" || options.baseUrl.length === 0) {
       throw new TypeError("verifier.request: baseUrl is required");
@@ -374,6 +424,9 @@ export class Verifier {
    * parse the form body, enforce CSRF state matching, and verify the
    * vp_token cryptographically. Returns the same result shape as `verify()`
    * plus the parsed transport envelope.
+   *
+   * @deprecated Use `verifier.responses.verify(rawBody, opts)` instead.
+   *   Removed in 1.0.
    */
   async response<TClaims = Record<string, unknown>>(
     rawBody: string | URLSearchParams | Record<string, string>,

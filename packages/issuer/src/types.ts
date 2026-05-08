@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 import type { JsonWebKey, Signer, SupportedAlg } from "@gramota/jose";
 import type { HashAlg, SdJwtDisclosure } from "@gramota/sd-jwt";
 
@@ -141,18 +143,16 @@ export type IssuerErrorCode =
   | "issuer.reserved_claim_in_subject"
   | "issuer.batch_empty";
 
-export class IssuerError extends Error {
-  override readonly name = "IssuerError";
-  readonly code: IssuerErrorCode;
+export class IssuerError extends GramotaError {
+  override readonly code: IssuerErrorCode;
+
   constructor(
     code: IssuerErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "IssuerError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

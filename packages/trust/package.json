@@ -1,7 +1,7 @@
 {
   "name": "@gramota/trust",
   "version": "0.1.1",
-  "description": "Pluggable trust resolution for EUDIW issuers — static lists, JWKS URLs, future EU Trusted List support.",
+  "description": "Pluggable trust resolution for EUDIW issuers \u2014 static lists, JWKS URLs, future EU Trusted List support.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@gramota/core": "workspace:*",
     "@gramota/jose": "workspace:*"
   },
   "author": "Petromil Pavlov <petromilpavlov@gmail.com>",

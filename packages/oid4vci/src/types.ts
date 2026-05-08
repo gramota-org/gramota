@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * OID4VCI Final 1.0 wire-format types.
  * Spec: https://openid.net/specs/openid-4-verifiable-credential-issuance-1_0.html
@@ -176,18 +178,16 @@ export type Oid4vciErrorCode =
   | "oid4vci.par_response_invalid"
   | "oid4vci.par_endpoint_missing";
 
-export class Oid4vciError extends Error {
-  override readonly name = "Oid4vciError";
-  readonly code: Oid4vciErrorCode;
+export class Oid4vciError extends GramotaError {
+  override readonly code: Oid4vciErrorCode;
+
   constructor(
     code: Oid4vciErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "Oid4vciError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

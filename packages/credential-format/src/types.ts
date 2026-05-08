@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * Credential-format handler types.
  *
@@ -68,19 +70,17 @@ export type CredentialFormatErrorCode =
   | "credential_format.capability_missing"
   | "credential_format.invalid_token";
 
-export class CredentialFormatError extends Error {
-  override readonly name = "CredentialFormatError";
-  readonly code: CredentialFormatErrorCode;
+export class CredentialFormatError extends GramotaError {
+  override readonly code: CredentialFormatErrorCode;
+
   constructor(
     code: CredentialFormatErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "CredentialFormatError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }
 

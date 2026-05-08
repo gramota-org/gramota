@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 import type { JsonWebKey } from "@gramota/jose";
 
 /** Inputs the resolver gets to make a decision. */
@@ -29,19 +31,16 @@ export type TrustErrorCode =
   | "trust.malformed_jwks"
   | "trust.invalid_input";
 
-export class TrustResolutionError extends Error {
-  override readonly name = "TrustResolutionError";
-  readonly code: TrustErrorCode;
+export class TrustResolutionError extends GramotaError {
+  override readonly code: TrustErrorCode;
 
   constructor(
     code: TrustErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "TrustResolutionError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

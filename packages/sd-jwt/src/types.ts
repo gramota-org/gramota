@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * Stable identifiers for every failure mode in `@gramota/sd-jwt`.
  *
@@ -54,19 +56,17 @@ export type SdJwtErrorCode =
  * (`SdJwtParseError`, `SdJwtVerificationError`, `SdJwtIssuanceError`,
  * `SdJwtKeyBindingError`).
  */
-export class SdJwtError extends Error {
-  override readonly name = "SdJwtError";
-  readonly code: SdJwtErrorCode;
+export class SdJwtError extends GramotaError {
+  override readonly code: SdJwtErrorCode;
+
   constructor(
     code: SdJwtErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "SdJwtError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }
 

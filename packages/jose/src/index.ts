@@ -1,11 +1,16 @@
 export { verifyJws } from "./verify.js";
 export { verifyJwsWithX5c } from "./verify-x5c.js";
 export { computeJwkThumbprint } from "./thumbprint.js";
+// Re-export the transport types from @gramota/core. They lived here
+// historically; moved to core in 0.3.0 so non-crypto packages don't
+// need a jose dep just to type their fetch adapter. The re-export
+// stays so existing `import { Fetcher } from "@gramota/jose"` keeps
+// working — schedule its removal for 1.0.
 export {
   mockFetcherResponse,
   type Fetcher,
   type FetcherResponse,
-} from "./fetcher.js";
+} from "@gramota/core";
 export type {
   VerifyJwsX5cOptions,
   VerifiedJwsWithX5c,

@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * Public types and the {@link QrError} class for `@gramota/qr`.
  *
@@ -28,15 +30,17 @@ export type QrErrorCode =
  * plus a free-form message. Caught upstream, the code is stable
  * across releases — log it in audit trails, branch on it in handlers.
  */
-export class QrError extends Error {
-  override readonly name = "QrError";
-  readonly code: QrErrorCode;
-  constructor(code: QrErrorCode, message: string, options?: { cause?: unknown }) {
-    super(message);
+export class QrError extends GramotaError {
+  override readonly code: QrErrorCode;
+
+  constructor(
+    code: QrErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, code, options);
+    this.name = "QrError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }
 

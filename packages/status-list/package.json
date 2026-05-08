@@ -1,7 +1,7 @@
 {
   "name": "@gramota/status-list",
   "version": "0.1.1",
-  "description": "IETF Token Status List — credential revocation/suspension checks for SD-JWT-VC.",
+  "description": "IETF Token Status List \u2014 credential revocation/suspension checks for SD-JWT-VC.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@gramota/core": "workspace:*",
     "@gramota/jose": "workspace:*",
     "@gramota/sd-jwt": "workspace:*"
   },

@@ -15,6 +15,7 @@
 import { describe, it, expect } from "vitest";
 import {
   qr,
+  QrClient,
   QrCode,
   QrError,
   type QrFormat,
@@ -57,16 +58,14 @@ describe("qr.fromUrl — factory + input validation", () => {
   });
 
   it("accepts custom URI schemes (deep links)", () => {
-    const code = qr.fromUrl("openid4vp://?client_id=abc", {
-      renderer: new MockRenderer(),
-    });
+    const client = new QrClient({ renderer: new MockRenderer() });
+    const code = client.fromUrl("openid4vp://?client_id=abc");
     expect(code.url).toBe("openid4vp://?client_id=abc");
   });
 
   it("accepts https URLs", () => {
-    const code = qr.fromUrl("https://example.com/verify/abc", {
-      renderer: new MockRenderer(),
-    });
+    const client = new QrClient({ renderer: new MockRenderer() });
+    const code = client.fromUrl("https://example.com/verify/abc");
     expect(code).toBeInstanceOf(QrCode);
   });
 });
@@ -74,7 +73,8 @@ describe("qr.fromUrl — factory + input validation", () => {
 describe("Strategy: custom QrRenderer plugs in", () => {
   it("the orchestrator never touches `qrcode` when a custom renderer is supplied", async () => {
     const mock = new MockRenderer();
-    const code = qr.fromUrl("https://example.com", { renderer: mock });
+    const client = new QrClient({ renderer: mock });
+    const code = client.fromUrl("https://example.com");
     const dataUrl = await code.toDataUrl();
     const svg = await code.toSvg();
     expect(dataUrl).toBe("<mock-dataUrl>https://example.com</mock-dataUrl>");
@@ -84,13 +84,14 @@ describe("Strategy: custom QrRenderer plugs in", () => {
 
   it("forwards QrOptions to the renderer (without leaking the renderer ref)", async () => {
     const mock = new MockRenderer();
-    const code = qr.fromUrl("https://example.com", {
+    const client = new QrClient({
       renderer: mock,
       width: 500,
       margin: 4,
       colors: { dark: "#0b1220", light: "#f1f5f9" },
       errorCorrection: "Q",
     });
+    const code = client.fromUrl("https://example.com");
     await code.toDataUrl();
     expect(mock.calls[0]!.options).toEqual({
       width: 500,
@@ -101,12 +102,21 @@ describe("Strategy: custom QrRenderer plugs in", () => {
     // The renderer key MUST NOT appear in the options the renderer sees.
     expect(mock.calls[0]!.options).not.toHaveProperty("renderer");
   });
+
+  it("per-call options layer over the constructor defaults", async () => {
+    const mock = new MockRenderer();
+    const client = new QrClient({ renderer: mock, width: 200, margin: 4 });
+    const code = client.fromUrl("https://example.com", { width: 800 });
+    await code.toDataUrl();
+    expect(mock.calls[0]!.options).toEqual({ width: 800, margin: 4 });
+  });
 });
 
 describe("Lazy + memoisation", () => {
   it("renders each format on first call only — subsequent calls hit the cache", async () => {
     const mock = new MockRenderer();
-    const code = qr.fromUrl("https://example.com", { renderer: mock });
+    const client = new QrClient({ renderer: mock });
+    const code = client.fromUrl("https://example.com");
 
     // Two awaits of the same format → still one render.
     const a = await code.toDataUrl();
@@ -121,7 +131,8 @@ describe("Lazy + memoisation", () => {
 
   it("concurrent first-callers share the same in-flight render", async () => {
     const mock = new MockRenderer();
-    const code = qr.fromUrl("https://example.com", { renderer: mock });
+    const client = new QrClient({ renderer: mock });
+    const code = client.fromUrl("https://example.com");
 
     // Fire three concurrent toDataUrl() before any has resolved.
     const [a, b, c] = await Promise.all([
@@ -138,30 +149,27 @@ describe("Lazy + memoisation", () => {
 
 describe("qr.fromAuthorizationRequest — composes with @gramota/oid4vp", () => {
   it("builds the openid4vp:// deep link before rendering", async () => {
-    const mock = new MockRenderer();
-    const code = qr.fromAuthorizationRequest(
-      {
-        response_type: "vp_token",
-        client_id: "x509_san_dns:my-bank.com",
-        nonce: "n-12345",
-        state: "s-12345",
-      },
-      { renderer: mock },
-    );
+    const client = new QrClient({ renderer: new MockRenderer() });
+    const code = client.fromAuthorizationRequest({
+      response_type: "vp_token",
+      client_id: "x509_san_dns:my-bank.com",
+      nonce: "n-12345",
+      state: "s-12345",
+    });
     expect(code.url).toMatch(/^openid4vp:\/\//);
     expect(code.url).toContain("client_id=x509_san_dns");
     expect(code.url).toContain("nonce=n-12345");
   });
 
   it("honours a custom scheme (HAIP / vendor schemes)", () => {
-    const mock = new MockRenderer();
-    const code = qr.fromAuthorizationRequest(
+    const client = new QrClient({ renderer: new MockRenderer() });
+    const code = client.fromAuthorizationRequest(
       {
         response_type: "vp_token",
         client_id: "https://my-bank.com",
         nonce: "n",
       },
-      { renderer: mock, scheme: "haip://" },
+      { scheme: "haip://" },
     );
     expect(code.url).toMatch(/^haip:\/\//);
   });
@@ -169,19 +177,16 @@ describe("qr.fromAuthorizationRequest — composes with @gramota/oid4vp", () => 
 
 describe("qr.fromCredentialOffer — composes with @gramota/oid4vci", () => {
   it("builds the openid-credential-offer:// deep link", () => {
-    const mock = new MockRenderer();
-    const code = qr.fromCredentialOffer(
-      {
-        credential_issuer: "https://acme.gramota.dev",
-        credential_configuration_ids: ["urn:eudi:pid:1_sd_jwt_vc"],
-        grants: {
-          "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
-            "pre-authorized_code": "abc123",
-          },
+    const client = new QrClient({ renderer: new MockRenderer() });
+    const code = client.fromCredentialOffer({
+      credential_issuer: "https://acme.gramota.dev",
+      credential_configuration_ids: ["urn:eudi:pid:1_sd_jwt_vc"],
+      grants: {
+        "urn:ietf:params:oauth:grant-type:pre-authorized_code": {
+          "pre-authorized_code": "abc123",
         },
       },
-      { renderer: mock },
-    );
+    });
     expect(code.url).toMatch(/^openid-credential-offer:\/\//);
     expect(code.url).toContain("credential_offer=");
     expect(decodeURIComponent(code.url.split("credential_offer=")[1]!)).toContain(

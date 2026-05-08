@@ -1,7 +1,7 @@
 {
   "name": "@gramota/credential-format",
   "version": "0.1.1",
-  "description": "Pluggable credential-format handler registry — Strategy + Registry pattern for SD-JWT-VC, mDoc, and future formats.",
+  "description": "Pluggable credential-format handler registry \u2014 Strategy + Registry pattern for SD-JWT-VC, mDoc, and future formats.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -19,7 +19,9 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@gramota/core": "workspace:*"
+  },
   "devDependencies": {},
   "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
   "homepage": "https://github.com/gramota-org/gramota#readme",

@@ -1,3 +1,4 @@
+import { GramotaError } from "@gramota/core";
 import type { JsonWebKey, SupportedAlg } from "@gramota/jose";
 import type { TrustResolver } from "@gramota/trust";
 import type {
@@ -203,17 +204,18 @@ export interface FailureResult {
   unwrap(): never;
 }
 
-export class VerifierError extends Error {
-  override readonly name = "VerifierError";
+export class VerifierError extends GramotaError {
   /** Equal to `result.failedCheck` — stable identifier for log filters,
    * alerts, and dashboards. Same shape as the codes used by other packages. */
-  readonly code: SecurityCheckName;
+  override readonly code: SecurityCheckName;
+
   constructor(
     message: string,
     /** The full failure record — stable for logging. */
     readonly result: FailureResult,
   ) {
-    super(message);
+    super(message, result.failedCheck);
+    this.name = "VerifierError";
     this.code = result.failedCheck;
   }
 }

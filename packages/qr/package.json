@@ -1,7 +1,7 @@
 {
   "name": "@gramota/qr",
-  "version": "0.1.0",
-  "description": "QR-code rendering for EUDIW deep links — OID4VP authorization requests and OID4VCI credential offers, with Strategy-pluggable renderers.",
+  "version": "0.2.0",
+  "description": "QR-code rendering for EUDIW deep links \u2014 OID4VP authorization requests and OID4VCI credential offers, with Strategy-pluggable renderers.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@gramota/core": "workspace:*",
     "@gramota/oid4vci": "workspace:*",
     "@gramota/oid4vp": "workspace:*",
     "qrcode": "^1.5.4"

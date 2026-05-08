@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /** JSON Web Key (RFC 7517). Minimum fields by key type. */
 export interface JsonWebKey {
   kty: "RSA" | "EC" | "OKP" | "oct";
@@ -68,19 +70,16 @@ export type JoseErrorCode =
   | "jose.x5c_chain_invalid"
   | "jose.x5c_no_trust_anchor";
 
-export class JoseError extends Error {
-  override readonly name = "JoseError";
-  readonly code: JoseErrorCode;
+export class JoseError extends GramotaError {
+  override readonly code: JoseErrorCode;
 
   constructor(
     code: JoseErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "JoseError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

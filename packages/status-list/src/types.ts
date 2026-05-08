@@ -1,3 +1,5 @@
+import { GramotaError } from "@gramota/core";
+
 /**
  * IETF Token Status List wire-format types.
  * Spec: https://datatracker.ietf.org/doc/draft-ietf-oauth-status-list/
@@ -93,18 +95,16 @@ export type StatusListErrorCode =
   | "status_list.expired"
   | "status_list.no_status_reference";
 
-export class StatusListError extends Error {
-  override readonly name = "StatusListError";
-  readonly code: StatusListErrorCode;
+export class StatusListError extends GramotaError {
+  override readonly code: StatusListErrorCode;
+
   constructor(
     code: StatusListErrorCode,
     message: string,
     options?: { cause?: unknown },
   ) {
-    super(message);
+    super(message, code, options);
+    this.name = "StatusListError";
     this.code = code;
-    if (options?.cause !== undefined) {
-      (this as { cause?: unknown }).cause = options.cause;
-    }
   }
 }

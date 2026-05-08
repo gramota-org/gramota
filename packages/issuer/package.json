@@ -1,7 +1,7 @@
 {
   "name": "@gramota/issuer",
   "version": "0.3.0",
-  "description": "EUDIW credential issuer — sign SD-JWT-VC credentials with selective disclosure and key binding.",
+  "description": "EUDIW credential issuer \u2014 sign SD-JWT-VC credentials with selective disclosure and key binding.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,6 +20,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@gramota/core": "workspace:*",
     "@gramota/jose": "workspace:*",
     "@gramota/sd-jwt": "workspace:*"
   },
