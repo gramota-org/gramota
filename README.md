@@ -52,8 +52,19 @@ const verifier = new Verifier({
   audience: "https://my-bank.com",
   trust: new StaticTrustResolver([issuerJwk]),
 });
-const result = await verifier.verify(presentationToken, { nonce });
+const result = await verifier.presentations.verify(presentationToken, { nonce });
 if (result.ok) console.log(result.claims);  // { given_name: "Greta", ... }
+```
+
+**Or the top-level facade — one import, one config:**
+
+```ts
+import { Gramota } from "@gramota/sdk";
+const gramota = new Gramota({
+  verifier: { audience: "https://my-bank.com", trust },
+});
+await gramota.verifier.presentations.verify(token, { nonce });
+const code = gramota.qr.fromAuthorizationRequest(req);
 ```
 
 Every wire-format check, every spec corner. **Live-tested against the EU
@@ -125,12 +136,18 @@ All packages live on the [`@gramota` npm org](https://www.npmjs.com/org/gramota)
 Every published tarball ships with a [signed provenance attestation](https://docs.npmjs.com/generating-provenance-statements)
 linking it to a specific GitHub commit (Sigstore transparency log).
 
-### High-level (start here)
+### Top-level facade
 
 | Package | What it does |
 |---|---|
-| [`@gramota/verifier`](https://www.npmjs.com/package/@gramota/verifier) [![npm](https://img.shields.io/npm/v/@gramota/verifier?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/verifier) | Relying-party verifier (12 security checks) |
-| [`@gramota/issuer`](https://www.npmjs.com/package/@gramota/issuer) [![npm](https://img.shields.io/npm/v/@gramota/issuer?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/issuer) | High-level issuer for SD-JWT-VC |
+| [`@gramota/sdk`](https://www.npmjs.com/package/@gramota/sdk) [![npm](https://img.shields.io/npm/v/@gramota/sdk?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/sdk) | Stripe-shaped facade: `new Gramota({...}).verifier.presentations.verify(...)` — one config, lazy-instantiated clients |
+
+### High-level
+
+| Package | What it does |
+|---|---|
+| [`@gramota/verifier`](https://www.npmjs.com/package/@gramota/verifier) [![npm](https://img.shields.io/npm/v/@gramota/verifier?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/verifier) | Relying-party verifier (12 security checks). Stripe-shaped: `presentations.verify`, `responses.verify`, `requests.create` |
+| [`@gramota/issuer`](https://www.npmjs.com/package/@gramota/issuer) [![npm](https://img.shields.io/npm/v/@gramota/issuer?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/issuer) | High-level issuer for SD-JWT-VC (`credentials.*`) |
 | [`@gramota/holder`](https://www.npmjs.com/package/@gramota/holder) [![npm](https://img.shields.io/npm/v/@gramota/holder?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/holder) | Headless holder / wallet (`credentials.*` + `offers.*`) |
 
 ### Protocol & transport
@@ -157,6 +174,12 @@ linking it to a specific GitHub commit (Sigstore transparency log).
 |---|---|
 | [`@gramota/trust`](https://www.npmjs.com/package/@gramota/trust) [![npm](https://img.shields.io/npm/v/@gramota/trust?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/trust) | `TrustResolver`: Static, JwksUrl, SdJwtVcIssuer (`.well-known/jwt-vc-issuer`) |
 | [`@gramota/status-list`](https://www.npmjs.com/package/@gramota/status-list) [![npm](https://img.shields.io/npm/v/@gramota/status-list?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/status-list) | IETF Token Status List + `StatusResolver` Strategy |
+
+### Foundation
+
+| Package | What it does |
+|---|---|
+| [`@gramota/core`](https://www.npmjs.com/package/@gramota/core) [![npm](https://img.shields.io/npm/v/@gramota/core?label=&color=cb3837)](https://www.npmjs.com/package/@gramota/core) | Shared primitives — `Fetcher` transport interface, `GramotaError` base class. Imported by every other `@gramota/*` package |
 
 ### Internal (not published)
 
