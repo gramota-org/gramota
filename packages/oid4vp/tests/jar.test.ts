@@ -1,11 +1,14 @@
 /**
  * RFC 9101 JAR signing conformance for OID4VP authorization requests.
  *
- * What we pin (per RFC 9101 §10 + OID4VP §5.10):
+ * What we pin (per RFC 9101 §10 + OID4VP §5.8 + §5.10):
  *   - Compact-serialised JWS, three segments separated by `.`
  *   - Header `alg=ES256`, `typ=oauth-authz-req+jwt`
  *   - Header `x5c` is an array carrying the signing cert
  *   - Payload IS the AuthorizationRequest object (not wrapped)
+ *   - Payload always carries `aud`, `iat`, `exp` (audit gap closed
+ *     2026-05; previously the wrapper in apps/api set these). Defaults:
+ *     `aud = https://self-issued.me/v2`, lifetime 300 s.
  *   - Signature verifies against the public key inside x5c[0]
  *   - Defensive guards: malformed/missing key, missing x5c
  */
@@ -13,6 +16,8 @@
 import { describe, it, expect } from "vitest";
 import { importX509, jwtVerify } from "jose";
 import {
+  DEFAULT_JAR_AUDIENCE,
+  DEFAULT_JAR_LIFETIME_SECONDS,
   Oid4vpError,
   generateSigningCert,
   signAuthorizationRequest,
@@ -87,6 +92,103 @@ describe("signAuthorizationRequest — wire shape", () => {
     expect(payload["nonce"]).toBe(request.nonce);
     expect(payload["state"]).toBe(request.state);
     expect(payload["response_type"]).toBe("vp_token");
+  });
+});
+
+describe("signAuthorizationRequest — JWT timing claims (RFC 9101 §4 / OID4VP §5.8)", () => {
+  it("always emits aud, iat, exp on the JAR payload", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const jwt = await signAuthorizationRequest({ request, cert });
+    const payload = decodePayload(jwt);
+    expect(typeof payload["aud"]).toBe("string");
+    expect(typeof payload["iat"]).toBe("number");
+    expect(typeof payload["exp"]).toBe("number");
+  });
+
+  it("defaults aud to https://self-issued.me/v2 (HAIP static discovery)", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const jwt = await signAuthorizationRequest({ request, cert });
+    expect(decodePayload(jwt)["aud"]).toBe("https://self-issued.me/v2");
+    // Also pin the exported constant — downstream consumers rely on it.
+    expect(DEFAULT_JAR_AUDIENCE).toBe("https://self-issued.me/v2");
+  });
+
+  it("honours a caller-supplied aud override", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const jwt = await signAuthorizationRequest({
+      request,
+      cert,
+      aud: "https://wallet.example.com/oid4vp",
+    });
+    expect(decodePayload(jwt)["aud"]).toBe(
+      "https://wallet.example.com/oid4vp",
+    );
+  });
+
+  it("falls back to the default when aud is explicitly undefined", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const jwt = await signAuthorizationRequest({
+      request,
+      cert,
+      aud: undefined,
+    });
+    expect(decodePayload(jwt)["aud"]).toBe(DEFAULT_JAR_AUDIENCE);
+  });
+
+  it("defaults jarLifetimeSeconds to 300 (exp - iat == 300)", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const jwt = await signAuthorizationRequest({ request, cert });
+    const payload = decodePayload(jwt);
+    const iat = payload["iat"] as number;
+    const exp = payload["exp"] as number;
+    expect(exp - iat).toBe(DEFAULT_JAR_LIFETIME_SECONDS);
+    expect(DEFAULT_JAR_LIFETIME_SECONDS).toBe(300);
+  });
+
+  it("honours a caller-supplied jarLifetimeSeconds override", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const jwt = await signAuthorizationRequest({
+      request,
+      cert,
+      jarLifetimeSeconds: 60,
+    });
+    const payload = decodePayload(jwt);
+    expect((payload["exp"] as number) - (payload["iat"] as number)).toBe(60);
+  });
+
+  it("accepts an injectable now() for deterministic testing", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    const fixed = 1_700_000_000;
+    const jwt = await signAuthorizationRequest({
+      request,
+      cert,
+      now: () => fixed,
+      jarLifetimeSeconds: 120,
+    });
+    const payload = decodePayload(jwt);
+    expect(payload["iat"]).toBe(fixed);
+    expect(payload["exp"]).toBe(fixed + 120);
+  });
+
+  it("never overrides a payload-level aud/iat/exp the caller pre-set on the request", async () => {
+    const { cert, request } = await makeCertAndRequest();
+    // Cast: AuthorizationRequest doesn't declare aud/iat/exp, but the
+    // spread-and-merge contract must still respect any extra fields the
+    // caller hands in (forward-compat for future spec extensions).
+    const augmented = {
+      ...request,
+      aud: "https://wallet-preset.example/x",
+      iat: 42,
+      exp: 84,
+    } as unknown as AuthorizationRequest;
+    const jwt = await signAuthorizationRequest({
+      request: augmented,
+      cert,
+    });
+    const payload = decodePayload(jwt);
+    expect(payload["aud"]).toBe("https://wallet-preset.example/x");
+    expect(payload["iat"]).toBe(42);
+    expect(payload["exp"]).toBe(84);
   });
 });
 

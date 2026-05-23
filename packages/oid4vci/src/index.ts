@@ -103,3 +103,66 @@ export {
   generateCodeVerifier,
   generateState,
 } from "./pkce.js";
+
+export {
+  CNonceStore,
+  C_NONCE_TTL_SECONDS,
+  type CNonceStoreLike,
+  type CNonceStoreOptions,
+  type CNonceMintOptions,
+  type CNonceMintResult,
+} from "./c-nonce-store.js";
+
+export {
+  ParStore,
+  PAR_DEFAULT_TTL_SECONDS,
+  type ParStoreLike,
+  type ParStoreOptions,
+  type ParRequestPayload,
+  type ParPutOptions,
+  type ParPutResult,
+  type PushedClientAttestation,
+} from "./par-store.js";
+
+export {
+  AuthCodeStore,
+  AUTH_CODE_TTL_SECONDS,
+  verifyPkceChallenge,
+  type AuthCodeStoreLike,
+  type AuthCodeStoreOptions,
+  type AuthCodeRequest,
+  type AuthCodePutOptions,
+  type AuthCodePutResult,
+  type CodeChallengeMethod,
+} from "./auth-code-store.js";
+
+export {
+  WalletAttestationError,
+  loadWalletAttestationConfigFromEnv,
+  verifyWalletAttestation,
+  type WalletAttestationConfig,
+  type WalletAttestationErrorCode,
+  type WalletAttestationHeaders,
+  type WalletAttestationResult,
+} from "./wallet-attestation.js";
+
+export {
+  InMemoryDpopJtiStore,
+  type DpopJtiStoreLike,
+  type InMemoryDpopJtiStoreOptions,
+} from "./dpop-jti-store.js";
+
+export {
+  buildAuthorizationServerMetadata,
+  buildIssuerMetadata,
+  type BuildAuthzServerMetadataInput,
+  type BuildIssuerMetadataInput,
+} from "./metadata-builders.js";
+
+export {
+  AUTHORIZATION_CODE_BYTES,
+  PRE_AUTHORIZED_CODE_BYTES,
+  generateAuthorizationCode,
+  generatePreAuthorizedCode,
+  type GenerateCodeOptions,
+} from "./codes.js";

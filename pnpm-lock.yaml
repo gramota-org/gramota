@@ -197,6 +197,9 @@ importers:
       '@gramota/jose':
         specifier: workspace:*
         version: link:../jose
+      jose:
+        specifier: ^5.9.6
+        version: 5.10.0
     devDependencies:
       '@gramota/issuer':
         specifier: workspace:*
@@ -204,9 +207,6 @@ importers:
       '@gramota/sd-jwt':
         specifier: workspace:*
         version: link:../sd-jwt
-      jose:
-        specifier: ^5.9.6
-        version: 5.10.0
 
   packages/oid4vp:
     dependencies:

@@ -18,9 +18,15 @@ export {
   type GenerateSigningCertOptions,
 } from "./cert.js";
 export {
+  DEFAULT_JAR_AUDIENCE,
+  DEFAULT_JAR_LIFETIME_SECONDS,
   signAuthorizationRequest,
   type SignAuthorizationRequestOptions,
 } from "./jar.js";
+export {
+  generateNonce,
+  generateState,
+} from "./random.js";
 export {
   DEFAULT_RESPONSE_JWE_ALG,
   DEFAULT_RESPONSE_JWE_ENC,

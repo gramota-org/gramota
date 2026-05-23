@@ -22,12 +22,12 @@
   "dependencies": {
     "@gramota/core": "workspace:*",
     "@gramota/credential-format": "workspace:*",
-    "@gramota/jose": "workspace:*"
+    "@gramota/jose": "workspace:*",
+    "jose": "^5.9.6"
   },
   "devDependencies": {
     "@gramota/issuer": "workspace:*",
-    "@gramota/sd-jwt": "workspace:*",
-    "jose": "^5.9.6"
+    "@gramota/sd-jwt": "workspace:*"
   },
   "author": "Petromil Pavlov <petromilpavlov@gmail.com>",
   "homepage": "https://github.com/gramota-org/gramota#readme",
