@@ -28,6 +28,8 @@ export {
   issueSdJwt,
   stubSignature,
   deterministicSalts,
+  sd,
+  type SdValue,
   type IssueSdJwtOptions,
   type IssuanceResult,
   type HashAlg,

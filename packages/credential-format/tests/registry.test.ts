@@ -21,8 +21,11 @@ import {
 describe("SdJwtVcFormatHandler — issuance-token validation", () => {
   const handler = new SdJwtVcFormatHandler();
 
-  it("claims vc+sd-jwt and dc+sd-jwt", () => {
-    expect(handler.formats).toEqual(["vc+sd-jwt", "dc+sd-jwt"]);
+  it("claims dc+sd-jwt (preferred per SD-JWT-VC §3.2.1) and the legacy vc+sd-jwt", () => {
+    // Modern `dc+sd-jwt` is listed first — it's the spec-mandated typ since
+    // SD-JWT-VC draft-08 (Nov 2024). `vc+sd-jwt` remains accepted for
+    // back-compat with already-minted credentials.
+    expect(handler.formats).toEqual(["dc+sd-jwt", "vc+sd-jwt"]);
     expect(handler.supports("vc+sd-jwt")).toBe(true);
     expect(handler.supports("dc+sd-jwt")).toBe(true);
     expect(handler.supports("mso_mdoc")).toBe(false);
@@ -80,7 +83,7 @@ describe("CredentialFormatRegistry — lookup & errors", () => {
     expect(r.has("vc+sd-jwt")).toBe(true);
     expect(r.has("dc+sd-jwt")).toBe(true);
     expect(r.has("mso_mdoc")).toBe(false);
-    expect(r.knownFormats()).toEqual(["vc+sd-jwt", "dc+sd-jwt"]);
+    expect(r.knownFormats()).toEqual(["dc+sd-jwt", "vc+sd-jwt"]);
   });
 
   it("rejects duplicate registration of the same format", () => {

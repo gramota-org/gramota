@@ -45,7 +45,8 @@ export type SdJwtErrorCode =
   | "sd_jwt.issue.alg_required"
   | "sd_jwt.issue.signer_returned_empty"
   | "sd_jwt.issue.unsupported_hash_alg"
-  | "sd_jwt.issue.salt_generator_exhausted";
+  | "sd_jwt.issue.salt_generator_exhausted"
+  | "sd_jwt.issue.sd_marker_misplaced";
 
 /**
  * Single error class for every failure mode in `@gramota/sd-jwt`.

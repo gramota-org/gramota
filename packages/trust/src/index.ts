@@ -11,3 +11,5 @@ export { SdJwtVcIssuerTrustResolver } from "./sd-jwt-vc-issuer.js";
 export type {
   SdJwtVcIssuerResolverOptions,
 } from "./sd-jwt-vc-issuer.js";
+export { LoTeTrustResolver } from "./lote.js";
+export type { LoTeEntry, LoTeTrustResolverOptions } from "./lote.js";

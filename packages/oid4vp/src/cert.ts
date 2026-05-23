@@ -23,10 +23,14 @@
 // `dist/cert.js` as a side-effecting module so bundlers don't drop it.
 import "reflect-metadata";
 import * as x509 from "@peculiar/x509";
-import { webcrypto } from "node:crypto";
+import { createHash, webcrypto } from "node:crypto";
 import { exportJWK, importPKCS8, importX509 } from "jose";
 import type { JsonWebKey } from "@gramota/jose";
-import { Oid4vpError, type SigningCert } from "./types.js";
+import {
+  Oid4vpError,
+  type ClientIdScheme,
+  type SigningCert,
+} from "./types.js";
 
 // @peculiar/x509 needs a Web Crypto provider — Node's webcrypto suffices.
 // Safe to call multiple times; no-op after first.
@@ -253,4 +257,124 @@ function derToPem(der: Uint8Array, label: string): string {
 
 function bytesToBase64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
+}
+
+// ---------------------------------------------------------------------------
+// Client Identifier Prefixes — OID4VP §5.9.3, HAIP Final 1.0 §5.
+// ---------------------------------------------------------------------------
+
+/**
+ * Compute the `x509_hash` digest of a signing cert per OID4VP §5.9.3 +
+ * HAIP Final 1.0 §5: `base64url(SHA-256(DER-encoded leaf certificate))`.
+ *
+ * The leaf cert's DER bytes are taken from the first entry of {@link
+ * SigningCert.x5c}. That entry is already base64-encoded DER (no PEM
+ * armour) — we decode, hash, and base64url-encode the digest.
+ *
+ * The result becomes the value part of the `x509_hash:<digest>` Client
+ * Identifier. Wallets that see this prefix:
+ *   1. Read the JWS `x5c` header.
+ *   2. Compute the same hash over the leaf cert.
+ *   3. Compare against the value portion of `client_id`.
+ *   4. If they match, the cert is the verifier's authentic key.
+ *
+ * Unlike `x509_san_dns`, the cert's SAN is not consulted — the cert
+ * itself, via its hash, IS the identity. This makes the prefix the
+ * spec-preferred form for HAIP Final 1.0: an attacker who steals the
+ * `client_id` cannot substitute a different (same-SAN) cert.
+ *
+ * @throws {@link Oid4vpError} `oid4vp.cert_generation_failed` when the
+ *   cert's `x5c` is missing or the leaf bytes are malformed base64.
+ */
+export function computeCertX509Hash(cert: SigningCert): string {
+  if (
+    cert === null ||
+    typeof cert !== "object" ||
+    !Array.isArray(cert.x5c) ||
+    cert.x5c.length === 0 ||
+    typeof cert.x5c[0] !== "string" ||
+    cert.x5c[0].length === 0
+  ) {
+    throw new Oid4vpError(
+      "oid4vp.cert_generation_failed",
+      "computeCertX509Hash: cert.x5c[0] must be a non-empty base64-DER string",
+    );
+  }
+  let der: Buffer;
+  try {
+    der = Buffer.from(cert.x5c[0], "base64");
+  } catch (err) {
+    throw new Oid4vpError(
+      "oid4vp.cert_generation_failed",
+      `computeCertX509Hash: failed to decode cert.x5c[0]: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
+  }
+  if (der.length === 0) {
+    throw new Oid4vpError(
+      "oid4vp.cert_generation_failed",
+      "computeCertX509Hash: cert.x5c[0] decoded to zero bytes",
+    );
+  }
+  return createHash("sha256").update(der).digest("base64url");
+}
+
+/** Schemes {@link buildClientIdFromCert} can construct. */
+export type CertBackedClientIdScheme = "x509_san_dns" | "x509_hash";
+
+export interface BuildClientIdFromCertOptions {
+  /** Signing material the verifier already provisioned. */
+  readonly cert: SigningCert;
+  /** Prefix to emit. Default `"x509_hash"` — HAIP Final 1.0 §5 mandates
+   * this prefix for production HAIP-conformant verifiers. Use
+   * `"x509_san_dns"` only for legacy / emulator interop where the wallet
+   * doesn't yet accept `x509_hash`. */
+  readonly scheme?: CertBackedClientIdScheme;
+}
+
+/**
+ * Build the OID4VP `client_id` for a cert-backed verifier.
+ *
+ * Returns the prefixed identifier per OID4VP §5.9.3:
+ *
+ *   - `x509_san_dns:<sanDns>` — legacy. Wallet looks up the cert's SAN
+ *     DNS entry; useful when wallets pre-resolve identity by hostname.
+ *   - `x509_hash:<base64url(sha256(DER(leaf)))>` — HAIP Final 1.0 §5
+ *     bullet 3 (MUST for HAIP-conformant verifiers). Wallet hashes the
+ *     leaf cert in the JWS `x5c` header and compares — no DNS coupling.
+ *
+ * Pair the returned `client_id` with the matching {@link ClientIdScheme}
+ * literal when populating an {@link AuthorizationRequest}.
+ *
+ * @throws {@link Oid4vpError} `oid4vp.cert_generation_failed` for an
+ *   unknown scheme, missing SAN-DNS, or malformed `x5c`.
+ */
+export function buildClientIdFromCert(
+  options: BuildClientIdFromCertOptions,
+): { clientId: string; scheme: ClientIdScheme } {
+  const scheme = options.scheme ?? "x509_hash";
+  if (scheme === "x509_san_dns") {
+    if (
+      typeof options.cert?.sanDns !== "string" ||
+      options.cert.sanDns.length === 0
+    ) {
+      throw new Oid4vpError(
+        "oid4vp.cert_generation_failed",
+        "buildClientIdFromCert(x509_san_dns): cert.sanDns is required",
+      );
+    }
+    return {
+      clientId: `x509_san_dns:${options.cert.sanDns}`,
+      scheme: "x509_san_dns",
+    };
+  }
+  if (scheme === "x509_hash") {
+    const digest = computeCertX509Hash(options.cert);
+    return { clientId: `x509_hash:${digest}`, scheme: "x509_hash" };
+  }
+  throw new Oid4vpError(
+    "oid4vp.cert_generation_failed",
+    `buildClientIdFromCert: unknown scheme ${JSON.stringify(scheme)}`,
+  );
 }

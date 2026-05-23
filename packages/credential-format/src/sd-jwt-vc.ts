@@ -3,11 +3,19 @@ import {
   type IssuanceCapableHandler,
 } from "./types.js";
 
-const SD_JWT_VC_FORMAT = "vc+sd-jwt";
+// SD-JWT-VC §3.2.1 (since draft-08, Nov 2024) mandates `dc+sd-jwt` for the
+// JWS `typ` header. The legacy `vc+sd-jwt` value is still accepted by the
+// transitional clauses of the spec for back-compat with already-minted
+// credentials. This handler treats both as equivalent identifiers — the
+// underlying parse/verify pipeline doesn't care which one the issuer used.
 const DC_SD_JWT_VC_FORMAT = "dc+sd-jwt";
+const SD_JWT_VC_FORMAT = "vc+sd-jwt";
 
 /**
- * Default handler for SD-JWT-VC and dc+sd-jwt credentials.
+ * Default handler for SD-JWT-VC credentials.
+ *
+ * Accepts both the modern `dc+sd-jwt` and legacy `vc+sd-jwt` format
+ * identifiers per SD-JWT-VC §3.2.1's transition guidance.
  *
  * Bundled with `@gramota/credential-format` because SD-JWT-VC is the
  * dominant EUDIW format. mDoc gets its own package when it lands.
@@ -21,9 +29,11 @@ const DC_SD_JWT_VC_FORMAT = "dc+sd-jwt";
  * dependency tree.
  */
 export class SdJwtVcFormatHandler implements IssuanceCapableHandler {
+  // Order matters for the `formats[0]` "primary" identifier convention used
+  // by OID4VCI metadata advertising — list the modern `dc+sd-jwt` first.
   readonly formats: readonly string[] = [
-    SD_JWT_VC_FORMAT,
     DC_SD_JWT_VC_FORMAT,
+    SD_JWT_VC_FORMAT,
   ];
   readonly canReceiveIssuance = true as const;
 

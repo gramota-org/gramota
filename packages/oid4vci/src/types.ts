@@ -165,6 +165,7 @@ export type Oid4vciErrorCode =
   | "oid4vci.unsupported_grant"
   | "oid4vci.unsupported_format"
   | "oid4vci.unsupported_proof_type"
+  | "oid4vci.invalid_proof"
   | "oid4vci.metadata_fetch_failed"
   | "oid4vci.metadata_invalid"
   | "oid4vci.token_request_failed"

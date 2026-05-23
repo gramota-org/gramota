@@ -28,7 +28,16 @@ export {
   type FetcherResponse,
 } from "./metadata.js";
 
-export { buildProofJwt, type BuildProofOptions } from "./proof.js";
+export {
+  buildProofJwt,
+  verifyProofJwt,
+  PROOF_JWT_TYP,
+  PROOF_JWT_DEFAULT_MAX_AGE_SECONDS,
+  PROOF_JWT_DEFAULT_MAX_FUTURE_SKEW_SECONDS,
+  type BuildProofOptions,
+  type VerifyProofJwtOptions,
+  type VerifyProofJwtResult,
+} from "./proof.js";
 
 export {
   requestToken,

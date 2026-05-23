@@ -106,7 +106,9 @@ describe("Issuer.issue — happy path", () => {
       "https://credentials.example.com/identity_v1",
     );
     expect(parsed.payload["cnf"]).toEqual({ jwk: holder.pub });
-    expect(parsed.header.typ).toBe("vc+sd-jwt");
+    // Default typ is `dc+sd-jwt` per SD-JWT-VC §3.2.1 (draft-08+, Nov 2024).
+    // The legacy `vc+sd-jwt` value still works via explicit `IssuerConfig.typ`.
+    expect(parsed.header.typ).toBe("dc+sd-jwt");
     expect(parsed.header.alg).toBe("ES256");
   });
 

@@ -18,7 +18,10 @@ export {
   DC_SD_JWT_VC_FORMAT,
   DcqlSdJwtVcMatcher,
   SD_JWT_VC_FORMAT,
+  isPidExtensionOf,
   type DcqlMatchResult,
+  type DcqlSdJwtVcMatcherOptions,
+  type DcqlVctMatchMode,
   type SdJwtVcCredentialView,
 } from "./sd-jwt-vc-matcher.js";
 

@@ -26,8 +26,11 @@ import { describe, it, expect } from "vitest";
 import * as x509 from "@peculiar/x509";
 import { webcrypto } from "node:crypto";
 import { importPKCS8, importX509, SignJWT, jwtVerify } from "jose";
+import { createHash } from "node:crypto";
 import {
   Oid4vpError,
+  buildClientIdFromCert,
+  computeCertX509Hash,
   generateSigningCert,
   signingCertToJwks,
   type SigningCert,
@@ -217,5 +220,92 @@ describe("signingCertToJwks — PEM → JWK pair", () => {
     await expect(
       signingCertToJwks({} as unknown as SigningCert),
     ).rejects.toBeInstanceOf(Oid4vpError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// HAIP Final 1.0 §5 — x509_hash client_id prefix.
+//
+// What we pin:
+//   - computeCertX509Hash returns base64url(sha256(DER leaf cert)) —
+//     same hash a wallet would compute over the JWS x5c header.
+//   - buildClientIdFromCert composes both prefixes correctly.
+//   - Defaults to x509_hash (HAIP-conformant) but still supports
+//     x509_san_dns for back-compat.
+// ---------------------------------------------------------------------------
+describe("computeCertX509Hash — OID4VP §5.9.3 / HAIP §5", () => {
+  it("returns base64url(sha256(DER leaf cert)) for a generated cert", async () => {
+    const { cert } = await gen();
+    const digest = computeCertX509Hash(cert);
+
+    // Recompute independently — bypassing the helper — to pin the
+    // exact byte-level definition.
+    const der = Buffer.from(cert.x5c[0]!, "base64");
+    const expected = createHash("sha256").update(der).digest("base64url");
+
+    expect(digest).toBe(expected);
+    // base64url has 43 chars for a 256-bit hash (32 bytes → 43 chars
+    // unpadded base64url).
+    expect(digest).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
+
+  it("rejects when x5c is missing or empty", () => {
+    expect(() =>
+      computeCertX509Hash({
+        privateKeyPem: "",
+        certificatePem: "",
+        x5c: [],
+        sanDns: "x",
+      }),
+    ).toThrow(Oid4vpError);
+    expect(() =>
+      computeCertX509Hash({
+        privateKeyPem: "",
+        certificatePem: "",
+        x5c: [""],
+        sanDns: "x",
+      }),
+    ).toThrow(Oid4vpError);
+  });
+
+  it("is deterministic — same cert in, same hash out", async () => {
+    const { cert } = await gen();
+    expect(computeCertX509Hash(cert)).toBe(computeCertX509Hash(cert));
+  });
+});
+
+describe("buildClientIdFromCert — Client Identifier Prefix selection", () => {
+  it("defaults to x509_hash (HAIP Final 1.0 §5 MUST)", async () => {
+    const { cert } = await gen();
+    const result = buildClientIdFromCert({ cert });
+    expect(result.scheme).toBe("x509_hash");
+    expect(result.clientId).toMatch(/^x509_hash:[A-Za-z0-9_-]{43}$/);
+    const expectedDigest = computeCertX509Hash(cert);
+    expect(result.clientId).toBe(`x509_hash:${expectedDigest}`);
+  });
+
+  it("supports x509_san_dns as the back-compat fallback", async () => {
+    const { cert } = await gen();
+    const result = buildClientIdFromCert({ cert, scheme: "x509_san_dns" });
+    expect(result.scheme).toBe("x509_san_dns");
+    expect(result.clientId).toBe(`x509_san_dns:${cert.sanDns}`);
+  });
+
+  it("rejects an unknown scheme", async () => {
+    const { cert } = await gen();
+    expect(() =>
+      buildClientIdFromCert({
+        cert,
+        scheme: "x509_san_uri" as unknown as "x509_hash",
+      }),
+    ).toThrow(Oid4vpError);
+  });
+
+  it("rejects x509_san_dns when cert has no sanDns", async () => {
+    const { cert } = await gen();
+    const stripped: SigningCert = { ...cert, sanDns: "" };
+    expect(() =>
+      buildClientIdFromCert({ cert: stripped, scheme: "x509_san_dns" }),
+    ).toThrow(Oid4vpError);
   });
 });

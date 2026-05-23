@@ -9,7 +9,11 @@ import { GramotaError } from "@gramota/core";
  * downstream packages will add DIF Presentation Exchange JSONPath support.
  */
 
-/** OID4VP §5.4 — `client_id_scheme` enumerated values. */
+/** OID4VP §5.4 + §5.9.3 / HAIP Final 1.0 §5 — `client_id_scheme`
+ * enumerated values. HAIP Final 1.0 mandates `x509_hash` for
+ * production verifiers; `x509_san_dns` is the legacy prefix the EU
+ * reference wallet's emulator build still accepts, kept here for
+ * back-compat during the transition. */
 export type ClientIdScheme =
   | "pre-registered"
   | "redirect_uri"
@@ -17,6 +21,7 @@ export type ClientIdScheme =
   | "did"
   | "x509_san_dns"
   | "x509_san_uri"
+  | "x509_hash"
   | "verifier_attestation"
   | (string & {});
 
@@ -138,7 +143,8 @@ export type Oid4vpErrorCode =
   | "oid4vp.malformed_body"
   | "oid4vp.malformed_submission"
   | "oid4vp.cert_generation_failed"
-  | "oid4vp.jar_signing_failed";
+  | "oid4vp.jar_signing_failed"
+  | "oid4vp.response_encryption_failed";
 
 export class Oid4vpError extends GramotaError {
   override readonly code: Oid4vpErrorCode;

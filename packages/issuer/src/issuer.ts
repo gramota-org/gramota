@@ -10,7 +10,11 @@ import {
   type IssuerConfig,
 } from "./types.js";
 
-const DEFAULT_TYP = "vc+sd-jwt";
+// SD-JWT-VC §3.2.1 (since draft-08, November 2024): the JWS `typ` header MUST
+// be `dc+sd-jwt`. Spec text recommends verifiers accept the legacy `vc+sd-jwt`
+// during the transition window for back-compat with already-minted credentials.
+// Override via `IssuerConfig.typ` for callers stuck on the legacy spelling.
+const DEFAULT_TYP = "dc+sd-jwt";
 const DEFAULT_HASH_ALG: HashAlg = "sha-256";
 
 /** Stripe-style sub-API for credential operations.
@@ -161,6 +165,11 @@ export class Issuer {
     };
     if (expiresAt !== undefined) payload["exp"] = expiresAt;
     if (options.notBefore !== undefined) payload["nbf"] = options.notBefore;
+    // Status claim plumbed per SD-JWT-VC §6 / HAIP §6.1. When the caller
+    // does NOT supply a status, OMIT the claim entirely — emitting an
+    // empty `status: {}` would tell the verifier "this credential is
+    // revocable but has no status list configured", which is worse than
+    // saying "non-revocable" outright.
     if (options.status !== undefined) payload["status"] = options.status;
 
     // Adapt the Signer to issueSdJwt's `signer: (s) => Promise<sig>` shape.

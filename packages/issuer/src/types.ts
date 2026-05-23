@@ -36,7 +36,9 @@ export type IssuerConfig = IssuerSignerInput & {
   hashAlg?: HashAlg;
   /** JOSE `kid` header to set on every issued credential. Optional. */
   kid?: string;
-  /** JOSE `typ` header. Default `vc+sd-jwt` (per SD-JWT-VC spec). */
+  /** JOSE `typ` header. Default `dc+sd-jwt` per SD-JWT-VC §3.2.1 (draft-08+,
+   * November 2024). Pass `"vc+sd-jwt"` explicitly to mint with the legacy
+   * value during the transition window. */
   typ?: string;
 };
 
@@ -64,7 +66,18 @@ export interface IssueOptions {
   notBefore?: number;
   /** Override `iat` — defaults to `floor(Date.now()/1000)` at call time. */
   issuedAt?: number;
-  /** Optional `status` claim for revocation tracking (Token Status List). */
+  /** Optional `status` claim per SD-JWT-VC §6 (Token Status List) /
+   * HAIP §6.1.
+   *
+   * When set, the issued credential carries a `status` claim with the
+   * supplied shape — typically `{ status_list: { uri: string, idx: number } }`
+   * referencing an IETF Token Status List the issuer publishes elsewhere
+   * (`@gramota/status-list`). The verifier resolves the URI at presentation
+   * time to look up the current revocation/suspension state at `idx`.
+   *
+   * When undefined, the `status` claim is OMITTED from the credential
+   * (not emitted as an empty value) — a credential without a status claim
+   * is treated as non-revocable by the verifier. */
   status?: Readonly<Record<string, unknown>>;
   /** Override the generated credential ID (default: random UUID v4). */
   credentialId?: string;
