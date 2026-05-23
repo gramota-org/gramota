@@ -1,5 +1,14 @@
 # @gramota/qr
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [79a622e]
+- Updated dependencies [329fcab]
+  - @gramota/oid4vci@0.4.0
+  - @gramota/oid4vp@0.3.0
+
 ## 0.4.0
 
 ### Minor Changes

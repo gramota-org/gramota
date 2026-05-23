@@ -1,6 +1,6 @@
 {
   "name": "@gramota/qr",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "QR-code rendering for EUDIW deep links — OID4VP authorization requests and OID4VCI credential offers, with Strategy-pluggable renderers.",
   "license": "Apache-2.0",
   "type": "module",

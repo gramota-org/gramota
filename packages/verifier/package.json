@@ -1,6 +1,6 @@
 {
   "name": "@gramota/verifier",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Relying-party verifier for the EU Digital Identity Wallet. One client, one method, full IETF SD-JWT-VC + KB-JWT spec compliance.",
   "license": "Apache-2.0",
   "type": "module",

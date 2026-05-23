@@ -1,5 +1,16 @@
 # @gramota/verifier
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [79a622e]
+- Updated dependencies [329fcab]
+  - @gramota/oid4vp@0.3.0
+  - @gramota/trust@0.2.0
+  - @gramota/sd-jwt@0.3.0
+  - @gramota/status-list@0.1.4
+
 ## 0.5.0
 
 ### Minor Changes

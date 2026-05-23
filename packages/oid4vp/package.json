@@ -1,6 +1,6 @@
 {
   "name": "@gramota/oid4vp",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "OpenID for Verifiable Presentations transport — authorization request/response wire format for EUDIW.",
   "license": "Apache-2.0",
   "type": "module",

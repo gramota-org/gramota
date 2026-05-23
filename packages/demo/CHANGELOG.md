@@ -1,5 +1,21 @@
 # @gramota/demo
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [79a622e]
+- Updated dependencies [329fcab]
+  - @gramota/oid4vci@0.4.0
+  - @gramota/trust@0.2.0
+  - @gramota/issuer@0.4.0
+  - @gramota/sd-jwt@0.3.0
+  - @gramota/credential-format@0.1.4
+  - @gramota/holder@0.1.4
+  - @gramota/verifier@0.5.1
+  - @gramota/status-list@0.1.4
+  - @gramota/presentation-exchange@0.1.4
+
 ## 0.0.4
 
 ### Patch Changes

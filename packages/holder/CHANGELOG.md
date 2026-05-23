@@ -1,5 +1,16 @@
 # @gramota/holder
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [79a622e]
+- Updated dependencies [329fcab]
+  - @gramota/oid4vci@0.4.0
+  - @gramota/oid4vp@0.3.0
+  - @gramota/sd-jwt@0.3.0
+  - @gramota/presentation-exchange@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes

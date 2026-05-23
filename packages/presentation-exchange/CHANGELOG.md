@@ -1,5 +1,12 @@
 # @gramota/presentation-exchange
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [79a622e]
+  - @gramota/sd-jwt@0.3.0
+
 ## 0.1.3
 
 ### Patch Changes

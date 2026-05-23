@@ -1,6 +1,6 @@
 {
   "name": "@gramota/dcql",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Digital Credentials Query Language (OID4VP 2.0) — match credentials against a verifier's dcql_query.",
   "license": "Apache-2.0",
   "type": "module",
