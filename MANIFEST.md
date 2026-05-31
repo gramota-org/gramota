@@ -294,7 +294,7 @@ This is an indie-to-platform path, not a venture path. Optionality preserves bot
 
 ## Status
 
-- Repo initialized: `/Users/petromilpavlov/Work/eudi-gateway`
+- Repo initialized: `/Users/petromilpavlov/Work/gramota`
 - Reference forks cloned as conformance fixtures: `eudi-srv-verifier-endpoint`, `eudi-web-verifier`, `eudi-srv-pid-issuer`
 - This manifest committed.
 - Phase 0 Week 1 scope: monorepo scaffold + `@gramota/types` skeleton + `@gramota/verifier` v0.1 against EU reference vectors.

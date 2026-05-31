@@ -1,5 +1,5 @@
 {
-  "name": "eudi-gateway",
+  "name": "gramota",
   "version": "0.0.0",
   "private": true,
   "description": "Open-source TypeScript SDK for the EU Digital Identity Wallet.",

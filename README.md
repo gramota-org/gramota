@@ -8,19 +8,20 @@ The TypeScript SDK for the **EU Digital Identity Wallet (EUDIW)**.
 Verify, issue, and integrate EUDIW credentials in 20 lines of code.
 
 [![npm](https://img.shields.io/npm/v/@gramota/verifier?label=%40gramota%2Fverifier&color=cb3837&logo=npm)](https://www.npmjs.com/package/@gramota/verifier)
-[![Tests](https://img.shields.io/badge/tests-579%20mock%20%2B%2031%20live-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-852%20mock%20%2B%2020%20live-brightgreen)]()
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)]()
 [![Node](https://img.shields.io/badge/Node-20%2B-brightgreen)]()
 [![Provenance](https://img.shields.io/badge/npm-provenance%20signed-blue?logo=sigstore)](https://www.npmjs.com/package/@gramota/verifier)
-[![Docs](https://img.shields.io/badge/docs-gramota--org.github.io-4f46e5)](https://gramota-org.github.io/site/)
+[![Docs](https://img.shields.io/badge/docs-gramota.eu-4f46e5)](https://gramota.eu/docs)
 
-> **v0.2 — verified end-to-end against the EU reference wallet.** Issuance
-> (OID4VCI Draft 15 + DPoP) and verification (OID4VP Final 1.0 + DCQL +
-> signed JAR) both round-trip cleanly with the official EUDIW Android wallet.
-> See [v0.2 highlights](#v02-highlights) below — or jump straight to the
-> [docs site](https://gramota-org.github.io/site/) for getting started,
-> guides, and the auto-generated API reference.
+> **Verified end-to-end against the EU reference wallet.** HAIP-conformant
+> issuance (OID4VCI Draft 13/15 + PAR + DPoP + wallet attestation) and
+> verification (OID4VP Final 1.0 + DCQL + signed JAR) both round-trip cleanly
+> with the official EUDIW Android wallet.
+> See [highlights](#highlights) below — or jump straight to the
+> [docs site](https://gramota.eu/docs) for getting started, guides, and the
+> auto-generated API reference.
 
 ---
 
@@ -74,10 +75,10 @@ EUDIW Android reference wallet** for both issuance and verification.
 
 ---
 
-## v0.2 highlights
+## Highlights
 
-The 0.2 release is the first version proven against a real EU wallet on a
-real device. What landed:
+Proven against a real EU wallet on a real device — and HAIP-conformant on the
+issuance side. What's landed:
 
 - **End-to-end with the EU reference wallet (Android).** Both flows green:
   the wallet receives a credential from `@gramota/issuer` over OID4VCI, then
@@ -101,6 +102,16 @@ real device. What landed:
 - **Stripe-shaped namespacing.** `holder.credentials.*`, `issuer.credentials.issue()`,
   unified `Fetcher` type across packages, `JoseError`/`SdJwtError`/`VerifierError`
   consistent naming. The library reads like one product, not eight.
+- **HAIP-conformant PID issuance.** Wallet attestation (`OAuth-Client-Attestation`
+  + PoP per HAIP §6.3), PAR (RFC 9126), single-use `c_nonce` and DPoP-`jti` replay
+  stores, and spec-shaped `.well-known` metadata builders — the full auth-code-flow
+  server surface, in-package.
+- **Batch issuance (OID4VCI Draft 14/15).** Issue multiple credentials in one
+  `/credential` request.
+- **New `@gramota/qr` package.** QR rendering for OID4VP / OID4VCI deep links —
+  pluggable renderer, three output formats.
+- **`VerifyOptions.require` hook.** Application-level predicate to gate acceptance
+  on your own claim rules, after the protocol checks pass.
 
 Per-package release notes live in each package's `CHANGELOG.md`
 (e.g. [`packages/verifier/CHANGELOG.md`](./packages/verifier/CHANGELOG.md)).
@@ -123,6 +134,7 @@ renames are breaking.
 | **PAR (RFC 9126)** | Pushed Authorization Requests | ✅ |
 | **JAR (RFC 9101)** | Signed Authorization Requests, `x509_san_dns` | ✅ |
 | **DPoP (RFC 9449)** | Sender-constrained tokens (client + server) | ✅ |
+| **Wallet Attestation** (HAIP §6.3) | Wallet-instance proof for PID issuance | ✅ |
 | **PKCE (RFC 7636)** | Proof Key for Code Exchange | ✅ |
 | **JOSE** (RFC 7515/7517/7518/7520) | JWS, JWK, JWA, JWS-JSON | ✅ |
 | **x5c chain validation** (RFC 7515 §4.1.6) | X.509 certificate chain | ✅ |
@@ -230,8 +242,8 @@ discovery (`/.well-known/jwt-vc-issuer`).
 Two-tier convention: fast mock by default, opt-in live against EU.
 
 ```bash
-pnpm test            # 579 mock tests, ~2s, no network
-pnpm test:live       # 31 live tests against EU dev infra (~2s + network)
+pnpm test            # 852 mock tests, ~2s, no network
+pnpm test:live       # 20 live tests against EU dev infra (~2s + network)
 pnpm test:all        # both, in one run
 ```
 
@@ -241,8 +253,8 @@ Live tests gated by `EUDI_LIVE=1`. CI runs mock on every push, live nightly.
 
 ## Project status
 
-- **Phase 0** (foundation): ✅ done — 14 packages (12 published, 2 internal), 579+31 tests
-- **Phase 1** (public launch): 🟡 in progress — ✅ npm v0.2.0 published, ✅ EU reference wallet round-trip on Android, ✅ [docs site live](https://gramota-org.github.io/site/), ⏳ launch post
+- **Phase 0** (foundation): ✅ done — 17 packages (15 published, 2 internal), 852+20 tests
+- **Phase 1** (public launch): 🟡 in progress — ✅ published to npm (`@gramota/verifier` 0.5.1), ✅ EU reference wallet round-trip on Android, ✅ [docs site live](https://gramota.eu), ⏳ launch post
 - **Phase 2** (downstream): 🗓 future — WordPress / Shopify / Stripe Connect
 
 Strategy and roadmap: [MANIFEST.md](./MANIFEST.md).
